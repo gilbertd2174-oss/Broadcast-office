@@ -1,0 +1,35 @@
+{
+  "name": "broadcast-office",
+  "productName": "Broadcast Office",
+  "version": "1.0.0",
+  "description": "Write one post for all your social sites and email or text your contacts.",
+  "author": "Broadcast Office",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "electron": "33.2.0",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "com.broadcastoffice.app",
+    "productName": "Broadcast Office",
+    "files": ["main.js", "index.html", "build/icon.png"],
+    "directories": { "output": "dist" },
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Broadcast Office",
+      "artifactName": "Broadcast-Office-Setup-${version}.exe"
+    }
+  }
+}
