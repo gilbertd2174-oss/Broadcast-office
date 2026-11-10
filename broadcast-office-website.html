@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
+<title>Broadcast Office</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a broadcast console — sticky tab bar, one working panel per tab, cards only for platforms and contacts */
+:root{
+  --bg:#F3F5F9; --panel:#FFFFFF; --ink:#16213A; --muted:#5B6782; --line:#DCE1EC;
+  --accent:#E2582B; --accent-ink:#FFFFFF; --soft:#FBE7DF;
+  --ok:#1F8A5B; --warn:#B7791F; --bad:#C2372F;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1524; --panel:#172036; --ink:#E7ECF7; --muted:#9AA6C2; --line:#2A3654;
+  --accent:#F27449; --accent-ink:#1A0E08; --soft:#3A2219;
+  --ok:#4CC38A; --warn:#E3A948; --bad:#F0726A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1524; --panel:#172036; --ink:#E7ECF7; --muted:#9AA6C2; --line:#2A3654;
+  --accent:#F27449; --accent-ink:#1A0E08; --soft:#3A2219;
+  --ok:#4CC38A; --warn:#E3A948; --bad:#F0726A; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1040px;margin:0 auto}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:16px 10px;display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;border-bottom:1px solid var(--line)}
+.brand{font:800 24px/1 var(--display);letter-spacing:-.02em;display:flex;align-items:center;gap:10px}
+.brand i{width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--soft)}
+nav{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px;margin-left:auto}
+nav a{color:var(--muted);text-decoration:none;font-weight:600;padding:7px 14px;border-radius:999px;font-size:14px}
+nav a[aria-current="page"]{background:var(--ink);color:var(--bg)}
+nav a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:28px;font-weight:800}
+h2{font-size:19px;font-weight:600}
+.lede{color:var(--muted);margin:6px 0 0;max-width:62ch}
+section.view{display:grid;gap:22px;padding-top:24px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:12px;min-width:0}
+label{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+input,textarea,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+textarea{resize:vertical;min-height:130px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.grow{flex:1 1 220px;min-width:0}
+button,.btn{font:600 14px/1 var(--body);border-radius:10px;padding:10px 14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+button:hover,.btn:hover{border-color:var(--muted)}
+.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.primary:hover{filter:brightness(1.05);border-color:var(--accent)}
+.ghost{background:transparent}
+.small{padding:7px 10px;font-size:13px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px}
+.muted{color:var(--muted)}
+.compose-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:22px}
+@media (max-width:820px){.compose-grid{grid-template-columns:minmax(0,1fr)}}
+.plats{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.plat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px;align-content:start}
+.plat.off{opacity:.55}
+.plat.done{border-color:var(--ok)}
+.plat-head{display:flex;align-items:center;gap:10px}
+.dot{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font:800 13px/1 var(--display);color:#fff;flex:none}
+.plat-head strong{flex:1;min-width:0}
+.meter{height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.meter b{display:block;height:100%;background:var(--ok)}
+.meter.warn b{background:var(--warn)} .meter.over b{background:var(--bad)}
+.pill{font-size:12px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--bg);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.pill.ok{color:var(--ok);border-color:currentColor}
+.pill.over{color:var(--bad);border-color:currentColor}
+.toggle{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);text-transform:none;letter-spacing:0;font-weight:500;cursor:pointer}
+.toggle input{width:16px;height:16px;accent-color:var(--accent)}
+.note{font-size:13px;color:var(--muted);background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:10px 12px}
+.table-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:560px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:middle}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td input[type=checkbox],th input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent)}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--soft);color:var(--ink)}
+.addr{font-family:var(--mono);font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;word-break:break-all;max-height:120px;overflow:auto;user-select:all}
+.chat{display:grid;grid-template-columns:220px minmax(0,1fr);gap:18px;min-height:420px}
+@media (max-width:720px){.chat{grid-template-columns:minmax(0,1fr)}}
+.threads{display:grid;gap:4px;align-content:start}
+.threads button{justify-content:space-between;width:100%;background:transparent;border-color:transparent}
+.threads button[aria-pressed="true"]{background:var(--panel);border-color:var(--line)}
+.msgs{display:flex;flex-direction:column;gap:8px;overflow-y:auto;max-height:420px;padding-right:4px}
+.msg{max-width:78%;padding:9px 12px;border-radius:14px;background:var(--bg);border:1px solid var(--line);align-self:flex-start}
+.msg.me{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.msg small{display:block;font-size:11px;opacity:.75;margin-bottom:2px}
+.empty{color:var(--muted);text-align:center;padding:30px 10px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;z-index:20}
+.panel{align-content:start}
+.drop{border:1.5px dashed var(--line);border-radius:12px;padding:12px;display:grid;gap:10px;background:var(--bg)}
+.drop.over{border-color:var(--accent);background:var(--soft)}
+.btnlabel{text-transform:none;letter-spacing:0;color:var(--ink);font-size:13px}
+.thumbs{display:flex;flex-wrap:wrap;gap:10px}
+.thumbs:empty{display:none}
+.thumb{position:relative;width:96px;display:grid;gap:6px}
+.thumb img{width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid var(--line);display:block;background:var(--panel)}
+.thumb .x{position:absolute;top:4px;right:4px;width:26px;height:26px;padding:0;justify-content:center;border-radius:50%;font-size:15px;line-height:1}
+.thumb .small{justify-content:center;padding:6px 8px;font-size:12px}
+.sched{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px}
+.banner{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;background:var(--soft);border:1px solid var(--accent);border-radius:12px;padding:12px 14px;margin-top:16px}
+.banner p{margin:0;min-width:0;flex:1 1 260px;overflow-wrap:anywhere}
+.count{font-family:var(--mono);font-size:11px;margin-left:4px;padding:1px 6px;border-radius:999px;background:var(--accent);color:var(--accent-ink)}
+.count:empty{display:none}
+.queue{display:grid;gap:12px}
+.qhead{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0 0}
+.qitem{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;grid-template-columns:130px minmax(0,1fr);gap:14px}
+.qitem.is-due{border-color:var(--warn)}
+.qitem.is-done{opacity:.7}
+@media (max-width:600px){.qitem{grid-template-columns:minmax(0,1fr)}}
+.qwhen{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;display:grid;gap:6px;align-content:start;justify-items:start}
+.qtext{white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
+.mini{display:flex;gap:6px;flex-wrap:wrap}
+.mini:empty{display:none}
+.mini img{width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--bg)}
+.pill.due{color:var(--warn);border-color:currentColor}
+.slots{display:grid;gap:8px}
+.photo-step{display:grid;gap:8px;background:var(--soft);border-radius:10px;padding:10px}
+.slot{display:flex;gap:8px;align-items:center}
+.slot .n{font-family:var(--mono);font-size:12px;color:var(--muted);width:18px;flex:none;text-align:right}
+.slot input{flex:1 1 auto;min-width:0}
+.slot .day{font-size:13px;color:var(--muted);width:42px;flex:none}
+@media (prefers-reduced-motion:no-preference){.plat,.msg{transition:border-color .2s,opacity .2s}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="brand"><i aria-hidden="true"></i>Broadcast Office</div>
+  <nav aria-label="Sections">
+    <a href="#post" data-tab="post">Post</a>
+    <a href="#scheduled" data-tab="scheduled">Scheduled<span class="count" id="qCount"></span></a>
+    <a href="#contacts" data-tab="contacts">Contacts</a>
+  </nav>
+</header>
+<div class="banner" id="dueBanner" hidden></div>
+
+<!-- POST -->
+<section class="view" id="v-post">
+  <div>
+    <h1>Write once, post everywhere</h1>
+    <p class="lede">Type your post, then work down the platform list. Each card shows whether your text fits that site, copies it, and opens the site's composer.</p>
+  </div>
+  <div class="compose-grid">
+    <div class="panel">
+      <label for="postText">Your post</label>
+      <textarea id="postText" placeholder="What do you want to say?"></textarea>
+      <div class="row">
+        <div class="grow"><label for="postLink">Link (optional)</label><input id="postLink" type="url" placeholder="https://"></div>
+        <div style="flex:0 0 auto;align-self:end" class="mono muted" id="charCount">0 characters</div>
+      </div>
+      <label for="postTags">Hashtags (optional)</label>
+      <input id="postTags" placeholder="#sale #weekend">
+      <label>Photos (optional)</label>
+      <div class="drop" id="drop">
+        <div class="row">
+          <label for="photoInput" class="btn small btnlabel">Add photos</label>
+          <input id="photoInput" type="file" accept="image/*" multiple hidden>
+          <span class="muted" style="font-size:13px">or drag them here. JPG, PNG, GIF or WebP, up to 20 MB each.</span>
+        </div>
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+      <div class="row">
+        <button class="primary" id="startRun">Post to selected sites</button>
+        <button class="ghost" id="resetRun">Clear checkmarks</button>
+      </div>
+      <div class="row">
+        <a class="btn" data-hub="buffer" target="_blank" rel="noopener" href="https://publish.buffer.com/">Copy &amp; open Buffer</a>
+        <a class="btn" data-hub="meta" target="_blank" rel="noopener" href="https://business.facebook.com/latest/composer">Copy &amp; open Business Suite</a>
+      </div>
+      <p class="muted" style="margin:0;font-size:13px">Paste once in Buffer to reach every account you've added there, or in Business Suite to post to Facebook and Instagram together.</p>
+      <div class="sched">
+        <label>Schedule for later <span class="mono" id="slotCount" style="text-transform:none;letter-spacing:0"></span></label>
+        <div class="slots" id="slots"></div>
+        <div class="row">
+          <button class="small" id="addSlot">Add another time</button>
+          <button class="small ghost" id="fillWeek">Same time, next 7 days</button>
+        </div>
+        <div class="row"><button id="schedBtn">Schedule post</button></div>
+        <p class="muted" style="margin:0;font-size:13px">Add up to 7 days and times. Each one becomes its own scheduled post. At each time Broadcast Office reminds you and loads the post, photos and sites with one click. It reminds you while it's open, so add a calendar reminder to get an alert on your phone too.</p>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>How posting works</h2>
+      <p class="muted" style="margin:0">X, Threads, Bluesky, LinkedIn, Reddit and WhatsApp open with your text already filled in. Facebook, Instagram, TikTok and YouTube don't allow that from a web page, so the text is copied and you paste it.</p>
+      <p class="muted" style="margin:0"><strong>Post to selected sites</strong> opens the first site that still needs a post. Come back, tap it again for the next one.</p>
+      <p class="muted" style="margin:0"><strong>Photos don't go across by themselves.</strong> Social sites only accept photos added in their own post box, so after a site opens, add the photo there: tap <strong>Copy</strong> and press Ctrl+V (X, Facebook, Threads, LinkedIn, Bluesky), or tap <strong>Save</strong> and choose the saved file (any site, including Instagram and TikTok).</p>
+      <div class="note" id="runStatus">0 of 0 selected sites posted.</div>
+    </div>
+  </div>
+  <div class="plats" id="plats"></div>
+</section>
+
+<!-- SCHEDULED -->
+<section class="view" id="v-scheduled" hidden>
+  <div>
+    <h1>Scheduled posts</h1>
+    <p class="lede">Posts waiting for their time. When one is due, tap Post now. It loads the text, photos and sites into the Post tab so you can send it.</p>
+  </div>
+  <div class="note">Broadcast Office can't publish while it's closed. For posts that go out by themselves, schedule them inside Buffer or Business Suite instead.</div>
+  <div class="queue" id="queue"></div>
+</section>
+
+<!-- CONTACTS -->
+<section class="view" id="v-contacts" hidden>
+  <div>
+    <h1>Contacts</h1>
+    <p class="lede">Keep everyone in one list, pick who to reach, then email or text them all at once. Your contacts stay on this computer.</p>
+  </div>
+  <div class="panel">
+    <h2>Add a contact</h2>
+    <form id="addForm" class="row">
+      <div class="grow"><label for="cName">Name</label><input id="cName" required placeholder="Jordan Lee"></div>
+      <div class="grow"><label for="cPhone">Phone</label><input id="cPhone" type="tel" placeholder="(404) 555-0123"></div>
+      <div class="grow"><label for="cEmail">Email</label><input id="cEmail" type="email" placeholder="jordan@example.com"></div>
+      <div class="grow"><label for="cGroup">Group</label><input id="cGroup" placeholder="Family, Customers…" list="groupList"></div>
+      <datalist id="groupList"></datalist>
+      <div style="align-self:end"><button class="primary" type="submit">Add contact</button></div>
+    </form>
+    <div class="row">
+      <label for="csvFile" class="btn small" style="text-transform:none;letter-spacing:0;color:var(--ink)">Import CSV</label>
+      <input id="csvFile" type="file" accept=".csv,text/csv" hidden>
+      <span class="muted" style="font-size:13px">Columns: name, phone, email, group. Exports from Google Contacts or your phone work too.</span>
+    </div>
+    <div class="note" id="contactStore">Loading your contacts…</div>
+  </div>
+
+  <div class="panel">
+    <div class="row">
+      <h2 class="grow">Your list</h2>
+      <select id="groupFilter" style="width:auto"><option value="">All groups</option></select>
+      <input id="contactSearch" placeholder="Search" style="width:180px">
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th><input type="checkbox" id="selAll" aria-label="Select all"></th><th>Name</th><th>Phone</th><th>Email</th><th>Group</th><th></th></tr></thead>
+        <tbody id="contactRows"></tbody>
+      </table>
+    </div>
+    <p class="mono muted" id="selCount" style="margin:0">0 selected</p>
+  </div>
+
+  <div class="compose-grid">
+    <div class="panel">
+      <h2>Email everyone selected</h2>
+      <label for="mSubject">Subject</label><input id="mSubject" placeholder="Subject">
+      <label for="mBody">Message</label><textarea id="mBody" placeholder="Write your email"></textarea>
+      <div class="row">
+        <a class="btn primary" id="gmailBtn" target="_blank" rel="noopener" href="https://mail.google.com/">Open in Gmail</a>
+        <a class="btn" id="outlookBtn" target="_blank" rel="noopener" href="https://outlook.live.com/mail/0/deeplink/compose">Open in Outlook</a>
+        <button id="copyEmails">Copy addresses</button>
+        <button id="copyWholeEmail">Copy whole email</button>
+      </div>
+      <p class="muted" style="margin:0;font-size:13px">Addresses go in BCC, so people don't see each other's emails.</p>
+      <div class="note" id="emailStatus" role="status"></div>
+      <div class="addr" id="emailList">No emails selected.</div>
+    </div>
+    <div class="panel">
+      <h2>Text everyone selected</h2>
+      <label for="tBody">Message</label><textarea id="tBody" placeholder="Write your text"></textarea>
+      <div class="row">
+        <button class="primary" id="copyText">Copy message</button>
+        <button id="copyNumbers">Copy numbers</button>
+        
+      </div>
+      <p class="muted" style="margin:0;font-size:13px">Paste the numbers into a new group text, or send one by one with the WhatsApp buttons in your list.</p>
+      <div class="addr" id="phoneList">No phone numbers selected.</div>
+    </div>
+  </div>
+</section>
+
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let toastT;function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,2200)}
+async function copy(text,msg){try{await navigator.clipboard.writeText(text);toast(msg||"Copied")}catch(e){const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand("copy")}catch(_){}ta.remove();toast(ok?(msg||"Copied"):"Couldn't copy. Select the text and copy it yourself.")}}
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- Tabs ---------- */
+const tabs=["post","scheduled","contacts"];
+function showTab(){const t=tabs.includes(location.hash.slice(1))?location.hash.slice(1):"post";
+  tabs.forEach(n=>{$("#v-"+n).hidden=n!==t;document.querySelector(`nav a[data-tab="${n}"]`).toggleAttribute("aria-current",n===t);if(n===t)document.querySelector(`nav a[data-tab="${n}"]`).setAttribute("aria-current","page")});
+}
+addEventListener("hashchange",showTab);
+
+/* ---------- Post ---------- */
+const P=[
+ {id:"x",paste:true,name:"X (Twitter)",c:"#111",l:"X",max:280,url:t=>"https://x.com/intent/post?text="+encodeURIComponent(t),prefill:true},
+ {id:"facebook",paste:true,name:"Facebook",c:"#1877F2",l:"f",max:63206,url:(t,link)=>link?"https://www.facebook.com/sharer/sharer.php?u="+encodeURIComponent(link):"https://www.facebook.com/",prefill:false},
+ {id:"instagram",name:"Instagram",c:"#C13584",l:"IG",max:2200,url:()=>"https://www.instagram.com/",prefill:false,hint:"Add a photo or video, then paste the caption."},
+ {id:"threads",paste:true,name:"Threads",c:"#000",l:"@",max:500,url:t=>"https://www.threads.net/intent/post?text="+encodeURIComponent(t),prefill:true},
+ {id:"linkedin",paste:true,name:"LinkedIn",c:"#0A66C2",l:"in",max:3000,url:t=>"https://www.linkedin.com/feed/?shareActive=true&text="+encodeURIComponent(t),prefill:true},
+ {id:"tiktok",name:"TikTok",c:"#EE1D52",l:"TT",max:2200,url:()=>"https://www.tiktok.com/upload",prefill:false,hint:"Upload a video, then paste the caption."},
+ {id:"bluesky",paste:true,name:"Bluesky",c:"#1185FE",l:"bs",max:300,url:t=>"https://bsky.app/intent/compose?text="+encodeURIComponent(t),prefill:true},
+ {id:"youtube",name:"YouTube Community",c:"#FF0000",l:"YT",max:5000,url:()=>"https://www.youtube.com/",prefill:false,hint:"Open your channel, then Create › Post."},
+ {id:"reddit",name:"Reddit",c:"#FF4500",l:"r/",max:300,url:(t,link)=>"https://www.reddit.com/submit?title="+encodeURIComponent(t.slice(0,300))+(link?"&url="+encodeURIComponent(link):""),prefill:true,hint:"Text becomes the post title."},
+ {id:"whatsapp",name:"WhatsApp Status / Chat",c:"#25D366",l:"wa",max:65536,url:t=>"https://wa.me/?text="+encodeURIComponent(t),prefill:true}
+];
+let draft=store.get("bd.draft",{text:"Big news: we're open late every Friday this month! Stop by and say hi.",link:"",tags:"#atl #smallbusiness"});
+let chosen=store.get("bd.chosen",{x:1,facebook:1,instagram:1,threads:1,linkedin:1,tiktok:0,bluesky:0,youtube:0,reddit:0,whatsapp:0});
+let posted=new Set();
+draft.photos=Array.isArray(draft.photos)?draft.photos:[];
+$("#postText").value=draft.text;$("#postLink").value=draft.link;$("#postTags").value=draft.tags;
+function fullText(p){const t=draft.text.trim(),tags=draft.tags.trim(),link=draft.link.trim();
+  let s=t;if(tags)s+="\n\n"+tags;if(link&&p.id!=="facebook"&&p.id!=="reddit")s+="\n"+link;return s}
+function renderPlats(){
+  $("#charCount").textContent=fullText(P[0]).length+" characters";
+  $("#plats").innerHTML=P.map(p=>{const len=[...fullText(p)].length,pct=Math.min(100,len/p.max*100),over=len>p.max,on=!!chosen[p.id],done=posted.has(p.id);
+   const cls=over?"over":pct>85?"warn":"";
+   return `<div class="plat ${on?"":"off"} ${done?"done":""}">
+    <div class="plat-head"><span class="dot" style="background:${p.c}">${p.l}</span><strong>${p.name}</strong>
+      <label class="toggle"><input type="checkbox" data-pick="${p.id}" ${on?"checked":""} aria-label="Include ${p.name}">Include</label></div>
+    <div class="meter ${cls}"><b style="width:${pct}%"></b></div>
+    <div class="row" style="justify-content:space-between"><span class="mono muted">${len.toLocaleString()} / ${p.max.toLocaleString()}</span>
+      ${done?'<span class="pill ok">Posted</span>':over?`<span class="pill over">${(len-p.max).toLocaleString()} too long</span>`:`<span class="pill">${p.prefill?"Text fills in":"You paste"}</span>`}</div>
+    ${p.hint?`<div class="muted" style="font-size:13px">${p.hint}</div>`:""}
+    ${draft.photos.length&&p.id!=="reddit"&&p.id!=="whatsapp"?`<div class="photo-step">
+      <div style="font-size:13px"><strong>Add your photo${draft.photos.length>1?"s":""} on the site.</strong> ${p.paste?"Copy it and press Ctrl+V in the post box, or save it and choose the file.":"This site needs you to choose the file, so save it first."}</div>
+      <div class="row">${p.paste?`<button class="small" data-cpp="${p.id}">Copy photo${draft.photos.length>1?" 1":""}</button>`:""}<button class="small" data-svall="1">Save ${draft.photos.length>1?"all "+draft.photos.length+" photos":"photo"}</button></div></div>`:""}
+    <div class="row"><a class="btn small ${done?"":"primary"}" data-go="${p.id}" target="_blank" rel="noopener" href="${esc(p.url(fullText(p),draft.link.trim()))}">Copy &amp; open</a>
+      <button class="small ghost" data-mark="${p.id}">${done?"Undo":"Mark posted"}</button></div></div>`}).join("");
+  const sel=P.filter(p=>chosen[p.id]),n=sel.filter(p=>posted.has(p.id)).length;
+  $("#runStatus").textContent=`${n} of ${sel.length} selected sites posted.`+(sel.length&&n===sel.length?" All done.":"");
+}
+function saveDraft(){draft={...draft,text:$("#postText").value,link:$("#postLink").value,tags:$("#postTags").value};store.set("bd.draft",draft);renderPlats()}
+["#postText","#postLink","#postTags"].forEach(s=>$(s).addEventListener("input",saveDraft));
+$("#plats").addEventListener("change",e=>{const id=e.target.dataset.pick;if(id){chosen[id]=e.target.checked?1:0;store.set("bd.chosen",chosen);renderPlats()}});
+$("#plats").addEventListener("click",e=>{const go=e.target.closest("[data-go]"),mk=e.target.closest("[data-mark]");
+  if(e.target.closest("[data-cpp]")){copyPhoto(draft.photos[0]);return}
+  if(e.target.closest("[data-svall]")){saveAllPhotos();return}
+  if(go){const p=P.find(x=>x.id===go.dataset.go);copy(fullText(p),"Post copied. Paste it if the text isn't filled in.");posted.add(p.id);setTimeout(renderPlats,50)}
+  if(mk){const id=mk.dataset.mark;posted.has(id)?posted.delete(id):posted.add(id);renderPlats()}});
+$("#startRun").addEventListener("click",()=>{const next=P.find(p=>chosen[p.id]&&!posted.has(p.id));
+  if(!draft.text.trim()&&!draft.photos.length){toast("Write your post or add a photo first.");return}
+  if(!next){toast("Every selected site is marked posted.");return}
+  document.querySelector(`[data-go="${next.id}"]`).click()});
+document.querySelectorAll("[data-hub]").forEach(a=>a.addEventListener("click",e=>{if(!draft.text.trim()){e.preventDefault();toast("Write your post first.");return}
+  copy(fullText(P[0]),a.dataset.hub==="buffer"?"Post copied. Paste it into Buffer.":"Post copied. Paste it into Business Suite.")}));
+$("#resetRun").addEventListener("click",()=>{posted.clear();renderPlats()});
+renderPlats();
+
+/* ---------- Photos ---------- */
+const refIndex={},urlCache={},memBlobs={};
+let idbP=null;
+function idb(){if(!idbP)idbP=new Promise((res,rej)=>{try{const r=indexedDB.open("broadcast-office",1);r.onupgradeneeded=()=>r.result.createObjectStore("photos");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}});return idbP}
+async function idbReq(mode,fn){const d=await idb();return new Promise((res,rej)=>{const tx=d.transaction("photos",mode);const q=fn(tx.objectStore("photos"));tx.oncomplete=()=>res(q&&q.result);tx.onerror=()=>rej(tx.error)})}
+const photoStore={
+  assets:null,
+  async put(file){
+    const name=file.name||"photo";
+    if(this.assets){try{const r=await this.assets.upload(file);return {id:r.id,url:r.url,kind:"asset",name}}catch(e){}}
+    const id="p"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+    try{await idbReq("readwrite",s=>s.put(file,id));return {id,kind:"idb",name}}
+    catch(e){memBlobs[id]=file;return {id,kind:"mem",name}}
+  },
+  async url(ref){
+    if(!ref)return "";
+    if(ref.kind==="asset")return ref.url||("/_blob/"+ref.id);
+    if(urlCache[ref.id])return urlCache[ref.id];
+    let b=memBlobs[ref.id];
+    if(!b){try{b=await idbReq("readonly",s=>s.get(ref.id))}catch(e){}}
+    return b?(urlCache[ref.id]=URL.createObjectURL(b)):"";
+  },
+  async del(ref){
+    if(!ref||inUse(ref.id))return;
+    try{
+      if(ref.kind==="asset"&&this.assets)await this.assets.delete(ref.id);
+      else if(ref.kind==="idb")await idbReq("readwrite",s=>s.delete(ref.id));
+      delete memBlobs[ref.id];
+    }catch(e){}
+  }
+};
+function inUse(id){return draft.photos.some(r=>r.id===id)||queue.some(it=>(it.photos||[]).some(r=>r.id===id))}
+function indexRefs(list){(list||[]).forEach(r=>{if(r&&r.id)refIndex[r.id]=r})}
+async function fillImgs(root){
+  for(const img of root.querySelectorAll("img[data-pid]")){
+    const url=await photoStore.url(refIndex[img.dataset.pid]);
+    if(url)img.src=url;else img.alt="Photo not found on this device";
+  }
+}
+function renderThumbs(){
+  indexRefs(draft.photos);
+  $("#thumbs").innerHTML=draft.photos.map(r=>`<div class="thumb">
+    <img data-pid="${esc(r.id)}" alt="${esc(r.name)}">
+    <button class="x" data-rm="${esc(r.id)}" aria-label="Remove ${esc(r.name)}">&times;</button>
+    <div class="row" style="gap:4px;flex-wrap:nowrap"><button class="small" data-cp="${esc(r.id)}">Copy</button><button class="small" data-sv="${esc(r.id)}">Save</button></div></div>`).join("");
+  fillImgs($("#thumbs"));
+}
+async function addPhotos(files){
+  const imgs=[...files].filter(f=>/^image\//.test(f.type));
+  if(!imgs.length){toast("Choose image files: JPG, PNG, GIF or WebP.");return}
+  for(const f of imgs){
+    if(f.size>20*1024*1024){toast(f.name+" is over 20 MB. Choose a smaller photo.");continue}
+    const ref=await photoStore.put(f);
+    draft.photos=[...draft.photos,ref];saveDraft();renderThumbs();
+  }
+  toast(imgs.length>1?"Photos added":"Photo added");
+}
+let downloadsCap=null;
+async function toPng(ref){
+  const url=await photoStore.url(ref);if(!url)throw new Error("missing");
+  const img=new Image();img.crossOrigin="anonymous";img.src=url;await img.decode();
+  const k=Math.min(1,4096/Math.max(img.naturalWidth,img.naturalHeight));
+  const c=document.createElement("canvas");c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);
+  c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+  return await new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error("png")),"image/png"));
+}
+async function getBlob(ref){
+  if(!ref)return null;
+  if(ref.kind==="asset"){try{const r=await fetch(await photoStore.url(ref));return r.ok?await r.blob():null}catch(e){return null}}
+  if(memBlobs[ref.id])return memBlobs[ref.id];
+  try{return await idbReq("readonly",s=>s.get(ref.id))||null}catch(e){return null}
+}
+const COPY_FAIL="Couldn't copy the photo here. Tap Save instead, then choose the saved photo when the site asks.";
+function copyPhoto(ref){
+  if(!ref){toast("That photo isn't available.");return}
+  // Windows app: use the Windows clipboard directly
+  if(window.boDesktop&&window.boDesktop.copyImage){
+    toPng(ref).then(b=>b.arrayBuffer()).then(buf=>window.boDesktop.copyImage(buf))
+      .then(()=>toast("Photo copied. Press Ctrl+V in the site's post box."))
+      .catch(()=>toast(COPY_FAIL));
+    return;
+  }
+  try{
+    navigator.clipboard.write([new ClipboardItem({"image/png":toPng(ref)})])
+      .then(()=>toast("Photo copied. Press Ctrl+V in the site's post box."))
+      .catch(()=>toast(COPY_FAIL));
+  }catch(e){toast(COPY_FAIL)}
+}
+function photoFilename(ref,blob,i){
+  const extOf={"image/jpeg":"jpg","image/png":"png","image/gif":"gif","image/webp":"webp"};
+  let base=String(ref.name||"photo").replace(/\.[^.]+$/,"").replace(/[^\w\- ]+/g,"").trim().slice(0,60)||"photo";
+  let ext=(String(ref.name||"").match(/\.(jpe?g|png|gif|webp)$/i)||[])[1];
+  ext=(ext||extOf[blob&&blob.type]||"jpg").toLowerCase();
+  return `${base}${i?"-"+i:""}.${ext==="jpeg"?"jpg":ext}`;
+}
+async function savePhoto(ref,i){
+  const blob=await getBlob(ref);
+  if(!blob){toast("That photo isn't on this device any more.");return false}
+  let filename=photoFilename(ref,blob,i),data=blob;
+  if(!/\.(jpg|png|gif|webp)$/.test(filename)){data=await toPng(ref);filename=filename.replace(/\.[^.]+$/,".png")}
+  if(window.boDesktop&&window.boDesktop.savePhoto){
+    try{await window.boDesktop.savePhoto(filename,await data.arrayBuffer());toast("Saved to your Downloads folder.");return true}
+    catch(e){toast("Couldn't save the photo. Try again.");return false}
+  }
+  if(downloadsCap){
+    try{await downloadsCap.save({filename,data});toast("Saved. Choose it from your Downloads when the site asks for a photo.");return true}
+    catch(e){if(e&&e.code==="declined")return false;if(e&&e.code==="rate_limited"){toast("Finish the save that's already open first.");return false}
+      toast("Saving isn't available here. Open Broadcast Office on your computer to save photos.");return false}
+  }
+  try{
+    const a=document.createElement("a");a.href=URL.createObjectURL(data);a.download=filename;
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),30000);
+    toast("Saved to your Downloads folder.");return true;
+  }catch(e){toast("Couldn't save the photo. Try again.");return false}
+}
+async function saveAllPhotos(){
+  for(let i=0;i<draft.photos.length;i++){const ok=await savePhoto(draft.photos[i],draft.photos.length>1?i+1:0);if(!ok)break}
+}
+$("#photoInput").addEventListener("change",e=>{addPhotos(e.target.files);e.target.value=""});
+const drop=$("#drop");
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over")}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,()=>drop.classList.remove("over")));
+drop.addEventListener("drop",e=>{e.preventDefault();if(e.dataTransfer&&e.dataTransfer.files.length)addPhotos(e.dataTransfer.files)});
+$("#postText").addEventListener("paste",e=>{const files=[...(e.clipboardData?.files||[])].filter(f=>/^image\//.test(f.type));if(files.length){e.preventDefault();addPhotos(files)}});
+$("#thumbs").addEventListener("click",e=>{
+  const rm=e.target.closest("[data-rm]"),cp=e.target.closest("[data-cp]"),sv=e.target.closest("[data-sv]");
+  if(rm){const ref=refIndex[rm.dataset.rm];draft.photos=draft.photos.filter(r=>r.id!==rm.dataset.rm);saveDraft();renderThumbs();photoStore.del(ref)}
+  if(cp)copyPhoto(refIndex[cp.dataset.cp]);
+  if(sv)savePhoto(refIndex[sv.dataset.sv],0);
+});
+renderThumbs();
+
+/* ---------- Schedule ---------- */
+let queue=store.get("bd.queue",[]),qCol=null;
+const notified=new Set(store.get("bd.notified",[]));
+const fmtWhen=t=>new Date(t).toLocaleString([], {weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+const excerpt=(s,n)=>{s=String(s||"").replace(/\s+/g," ").trim();return s.length>n?s.slice(0,n-1)+"…":s||"Photo post"};
+function itemText(it){let s=(it.text||"").trim();if((it.tags||"").trim())s+="\n\n"+it.tags.trim();if((it.link||"").trim())s+="\n"+it.link.trim();return s}
+function gcalLink(it){
+  const f=d=>new Date(d).toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"");
+  return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent("Post: "+excerpt(it.text,60))+
+    "&dates="+f(it.at)+"/"+f(it.at+15*60000)+"&details="+encodeURIComponent(itemText(it)+"\n\nOpen Broadcast Office and tap Post now.");
+}
+async function saveItem(it){
+  if(qCol){const {id,...body}=it;try{await qCol.doc(id).set(body)}catch(e){toast("Couldn't save the scheduled post. Check your connection and try again.")}}
+  else store.set("bd.queue",queue);
+}
+async function removeItem(id){
+  if(qCol){try{await qCol.doc(id).delete()}catch(e){toast("Couldn't delete it. Try again.")}}
+  else store.set("bd.queue",queue);
+}
+function loadIntoComposer(it){
+  draft={text:it.text||"",link:it.link||"",tags:it.tags||"",photos:[...(it.photos||[])]};
+  $("#postText").value=draft.text;$("#postLink").value=draft.link;$("#postTags").value=draft.tags;
+  if(it.platforms&&it.platforms.length){P.forEach(p=>chosen[p.id]=it.platforms.includes(p.id)?1:0);store.set("bd.chosen",chosen)}
+  posted.clear();saveDraft();renderThumbs();
+}
+function renderQueue(){
+  queue.forEach(it=>indexRefs(it.photos));
+  const now=Date.now();
+  const open=queue.filter(i=>i.status!=="posted").sort((a,b)=>a.at-b.at);
+  const done=queue.filter(i=>i.status==="posted").sort((a,b)=>b.at-a.at);
+  const due=open.filter(i=>i.at<=now);
+  $("#qCount").textContent=open.length?String(open.length):"";
+  const card=it=>{
+    const isDue=it.status!=="posted"&&it.at<=now,isDone=it.status==="posted";
+    const names=P.filter(p=>(it.platforms||[]).includes(p.id)).map(p=>p.name).join(", ")||"No sites picked";
+    return `<div class="qitem ${isDue?"is-due":""} ${isDone?"is-done":""}">
+      <div class="qwhen"><span>${esc(fmtWhen(it.at))}</span>
+        ${isDone?'<span class="pill ok">Posted</span>':isDue?'<span class="pill due">Due now</span>':'<span class="pill">Upcoming</span>'}</div>
+      <div style="display:grid;gap:8px;min-width:0">
+        <p class="qtext">${esc(excerpt(itemText(it),280))}</p>
+        <div class="mini">${(it.photos||[]).map(r=>`<img data-pid="${esc(r.id)}" alt="${esc(r.name)}">`).join("")}</div>
+        <div class="muted" style="font-size:13px">${esc(names)}${it.series?` · ${it.seriesI} of ${it.seriesN} in this set`:""}</div>
+        <div class="row">
+          ${isDone?"":`<button class="small primary" data-qpost="${esc(it.id)}">Post now</button>
+          <button class="small" data-qedit="${esc(it.id)}">Edit</button>
+          <a class="btn small" target="_blank" rel="noopener" href="${esc(gcalLink(it))}">Add to Google Calendar</a>`}
+          <button class="small ghost" data-qdel="${esc(it.id)}">Delete</button>
+          ${it.series&&!isDone&&open.filter(o=>o.series===it.series).length>1?`<button class="small ghost" data-qdelset="${esc(it.series)}">Delete all ${open.filter(o=>o.series===it.series).length} upcoming in set</button>`:""}
+        </div>
+      </div></div>`};
+  $("#queue").innerHTML=(open.length||done.length)
+    ?(open.length?open.map(card).join(""):'<p class="empty">Nothing waiting. Everything scheduled has been posted.</p>')+
+     (done.length?`<p class="qhead">Posted</p>`+done.slice(0,20).map(card).join(""):"")
+    :'<p class="empty">Nothing scheduled yet. On the Post tab, write a post, pick a time under Schedule for later, and tap Schedule post.</p>';
+  fillImgs($("#queue"));
+  // Due banner
+  const b=$("#dueBanner");
+  if(due.length){
+    b.hidden=false;
+    b.innerHTML=`<p><strong>${due.length===1?"A scheduled post is":due.length+" scheduled posts are"} ready to go:</strong> ${esc(excerpt(due[0].text,90))}</p>
+      <div class="row"><button class="small primary" data-qpost="${esc(due[0].id)}">Post now</button><a class="btn small" href="#scheduled">See all</a></div>`;
+  }else b.hidden=true;
+  // Desktop notifications, once per post
+  due.forEach(it=>{
+    if(notified.has(it.id))return;
+    notified.add(it.id);store.set("bd.notified",[...notified].slice(-200));
+    try{if("Notification" in window&&Notification.permission==="granted")new Notification("Time to post",{body:excerpt(it.text,120)})}catch(e){}
+  });
+}
+async function postNow(id){
+  const it=queue.find(i=>i.id===id);if(!it)return;
+  loadIntoComposer(it);
+  it.status="posted";renderQueue();await saveItem(it);
+  location.hash="#post";toast("Loaded. Work through your sites with Post to selected sites.");
+}
+async function editItem(id){
+  const it=queue.find(i=>i.id===id);if(!it)return;
+  loadIntoComposer(it);
+  slots=[toLocalInput(it.at)];renderSlots();
+  queue=queue.filter(i=>i.id!==id);renderQueue();await removeItem(id);
+  location.hash="#post";toast("Make your changes, then tap Schedule post again.");
+}
+async function deleteItem(id){
+  const it=queue.find(i=>i.id===id);if(!it)return;
+  queue=queue.filter(i=>i.id!==id);renderQueue();await removeItem(id);
+  (it.photos||[]).forEach(r=>photoStore.del(r));
+  toast("Deleted");
+}
+async function deleteSet(series){
+  const gone=queue.filter(i=>i.series===series&&i.status!=="posted");if(!gone.length)return;
+  queue=queue.filter(i=>!gone.includes(i));renderQueue();
+  for(const it of gone)await removeItem(it.id);
+  gone.forEach(it=>(it.photos||[]).forEach(r=>photoStore.del(r)));
+  toast(`Deleted ${gone.length} scheduled posts`);
+}
+document.addEventListener("click",e=>{
+  const a=e.target.closest("[data-qpost],[data-qedit],[data-qdel],[data-qdelset]");if(!a)return;
+  if(a.dataset.qpost)postNow(a.dataset.qpost);
+  else if(a.dataset.qedit)editItem(a.dataset.qedit);
+  else if(a.dataset.qdel)deleteItem(a.dataset.qdel);
+  else if(a.dataset.qdelset)deleteSet(a.dataset.qdelset);
+});
+/* Up to 7 days and times per post */
+const MAX_SLOTS=7;
+function toLocalInput(ms){const d=new Date(ms),pad=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`}
+function nextHour(){const d=new Date(Date.now()+60*60000);d.setMinutes(0,0,0);return d.getTime()}
+let slots=[toLocalInput(nextHour())];
+function renderSlots(){
+  $("#slots").innerHTML=slots.map((v,i)=>{
+    const t=v?new Date(v):null,day=t&&!isNaN(t)?t.toLocaleDateString([], {weekday:"short"}):"";
+    return `<div class="slot"><span class="n">${i+1}</span>
+      <input type="datetime-local" id="slot-${i}" data-slot="${i}" value="${esc(v)}" aria-label="Day and time ${i+1}">
+      <span class="day">${esc(day)}</span>
+      ${slots.length>1?`<button class="small ghost" data-rmslot="${i}" aria-label="Remove time ${i+1}">Remove</button>`:""}</div>`}).join("");
+  $("#slotCount").textContent=`${slots.length} of ${MAX_SLOTS}`;
+  $("#addSlot").disabled=slots.length>=MAX_SLOTS;
+}
+$("#slots").addEventListener("input",e=>{const i=e.target.dataset.slot;if(i!=null){slots[+i]=e.target.value;
+  const t=new Date(e.target.value);e.target.parentElement.querySelector(".day").textContent=isNaN(t)?"":t.toLocaleDateString([], {weekday:"short"})}});
+$("#slots").addEventListener("click",e=>{const b=e.target.closest("[data-rmslot]");if(b){slots.splice(+b.dataset.rmslot,1);renderSlots()}});
+$("#addSlot").addEventListener("click",()=>{
+  if(slots.length>=MAX_SLOTS){toast("You can add up to 7 times.");return}
+  const last=slots.length?new Date(slots[slots.length-1]).getTime():NaN;
+  slots.push(toLocalInput(isFinite(last)?last+24*3600000:nextHour()));renderSlots();
+  const inp=$("#slot-"+(slots.length-1));if(inp)inp.focus();
+});
+$("#fillWeek").addEventListener("click",()=>{
+  let base=slots[0]?new Date(slots[0]).getTime():NaN;if(!isFinite(base))base=nextHour();
+  while(base<Date.now())base+=24*3600000;
+  slots=Array.from({length:MAX_SLOTS},(_,i)=>toLocalInput(base+i*24*3600000));renderSlots();
+  toast("Filled in the next 7 days. Change any day or time you like.");
+});
+renderSlots();
+$("#schedBtn").addEventListener("click",async()=>{
+  if(!draft.text.trim()&&!draft.photos.length){toast("Write your post or add a photo first.");return}
+  const times=[...new Set(slots.filter(Boolean).map(v=>new Date(v).getTime()).filter(isFinite))].sort((a,b)=>a-b);
+  if(!times.length){toast("Pick at least one day and time.");return}
+  const past=times.filter(t=>t<Date.now()-60000);
+  if(past.length){toast(past.length===1?"One of your times has passed. Change it to a future time.":past.length+" of your times have passed. Change them to future times.");return}
+  const platforms=P.filter(p=>chosen[p.id]).map(p=>p.id);
+  if(!platforms.length){toast("Include at least one site.");return}
+  try{if("Notification" in window&&Notification.permission==="default")Notification.requestPermission().catch(()=>{})}catch(e){}
+  const series=times.length>1?"s"+Date.now().toString(36):null;
+  const items=times.map((at,i)=>({id:"q"+Date.now().toString(36)+i+Math.random().toString(36).slice(2,6),at,text:draft.text,link:draft.link,tags:draft.tags,
+    photos:[...draft.photos],platforms,status:"scheduled",created:Date.now(),...(series?{series,seriesN:times.length,seriesI:i+1}:{})}));
+  queue.push(...items);
+  draft={text:"",link:"",tags:draft.tags,photos:[]};
+  $("#postText").value="";$("#postLink").value="";saveDraft();renderThumbs();
+  slots=[toLocalInput(nextHour())];renderSlots();
+  renderQueue();
+  for(const it of items)await saveItem(it);
+  location.hash="#scheduled";
+  toast(items.length===1?"Scheduled for "+fmtWhen(items[0].at):`Scheduled ${items.length} posts, starting ${fmtWhen(items[0].at)}`);
+});
+let dueSig="";
+function tick(){const sig=queue.filter(i=>i.status!=="posted"&&i.at<=Date.now()).map(i=>i.id).join();if(sig!==dueSig){dueSig=sig;renderQueue()}}
+setInterval(tick,20000);
+renderQueue();
+
+/* ---------- Contacts ---------- */
+const SAMPLE=[
+ {name:"Example: Jordan Lee",phone:"(404) 555-0123",email:"jordan@example.com",group:"Customers"},
+ {name:"Example: Maya Patel",phone:"(678) 555-0188",email:"maya@example.com",group:"Family"},
+ {name:"Example: Chris Owens",phone:"(470) 555-0142",email:"chris@example.com",group:"Customers"}];
+let contacts=[],selected=new Set(),cCol=null,usingLocal=false;
+function digits(p){let d=String(p||"").replace(/\D/g,"");if(d.length===10)d="1"+d;return d}
+function filtered(){const g=$("#groupFilter").value,q=$("#contactSearch").value.toLowerCase();
+  return contacts.filter(c=>(!g||c.group===g)&&(!q||(c.name+c.phone+c.email+c.group).toLowerCase().includes(q)))}
+function renderContacts(){
+  const groups=[...new Set(contacts.map(c=>c.group).filter(Boolean))].sort();
+  const gf=$("#groupFilter"),cur=gf.value;
+  gf.innerHTML='<option value="">All groups</option>'+groups.map(g=>`<option ${g===cur?"selected":""}>${esc(g)}</option>`).join("");
+  $("#groupList").innerHTML=groups.map(g=>`<option value="${esc(g)}">`).join("");
+  const list=filtered();
+  $("#contactRows").innerHTML=list.length?list.map(c=>`<tr>
+    <td><input type="checkbox" data-sel="${c.id}" ${selected.has(c.id)?"checked":""} aria-label="Select ${esc(c.name)}"></td>
+    <td>${esc(c.name)}</td><td class="mono">${esc(c.phone)}</td><td>${esc(c.email)}</td>
+    <td>${c.group?`<span class="tag">${esc(c.group)}</span>`:""}</td>
+    <td style="white-space:nowrap">${c.phone?`<a class="btn small" target="_blank" rel="noopener" data-wa="${c.id}" href="https://wa.me/${digits(c.phone)}">WhatsApp</a> `:""}<button class="small ghost" data-del="${c.id}">Remove</button></td></tr>`).join("")
+    :`<tr><td colspan="6" class="empty">${contacts.length?"No contacts match.":"No contacts yet. Add one above or import a CSV."}</td></tr>`;
+  $("#selAll").checked=list.length>0&&list.every(c=>selected.has(c.id));
+  renderBulk();
+}
+function chosenContacts(){return contacts.filter(c=>selected.has(c.id))}
+function renderBulk(){
+  const sel=chosenContacts(),emails=sel.map(c=>c.email).filter(Boolean),phones=sel.map(c=>c.phone).filter(Boolean);
+  $("#selCount").textContent=`${sel.length} selected · ${emails.length} with email · ${phones.length} with phone`;
+  $("#emailList").textContent=emails.length?emails.join(", "):"No emails selected.";
+  $("#phoneList").textContent=phones.length?phones.join(", "):"No phone numbers selected.";
+  const su=$("#mSubject").value,body=$("#mBody").value,bcc=emails.join(",");
+  // Gmail's own handler for email links: opens a new message in your default Gmail account
+  const mailto="mailto:?bcc="+encodeURIComponent(bcc)+"&subject="+encodeURIComponent(su)+"&body="+encodeURIComponent(body);
+  $("#gmailBtn").href="https://mail.google.com/mail/?extsrc=mailto&url="+encodeURIComponent(mailto);
+  $("#gmailBtn").textContent=emails.length?`Open in Gmail (${emails.length})`:"Open in Gmail";
+  $("#outlookBtn").textContent=emails.length?`Open in Outlook (${emails.length})`:"Open in Outlook";
+  const st=$("#emailStatus");
+  if(!emails.length){st.textContent="Tick the people you want to email in Your list above. Only contacts with an email address are included.";st.style.color="var(--warn)"}
+  else{const missing=sel.length-emails.length;st.textContent=`Ready: ${emails.length} recipient${emails.length>1?"s":""} in BCC.`+(missing?` ${missing} selected contact${missing>1?"s have":" has"} no email and will be left out.`:"")+" Gmail opens a new message. Check it, then click Send.";st.style.color=""}
+  $("#outlookBtn").href="https://outlook.live.com/mail/0/deeplink/compose?bcc="+encodeURIComponent(bcc)+"&subject="+encodeURIComponent(su)+"&body="+encodeURIComponent(body);
+  document.querySelectorAll("[data-wa]").forEach(a=>{const c=contacts.find(x=>x.id===a.dataset.wa);a.href="https://wa.me/"+digits(c.phone)+($("#tBody").value?"?text="+encodeURIComponent($("#tBody").value):"")});
+}
+["#mSubject","#mBody","#tBody"].forEach(s=>$(s).addEventListener("input",renderBulk));
+$("#groupFilter").addEventListener("change",renderContacts);
+$("#contactSearch").addEventListener("input",renderContacts);
+$("#selAll").addEventListener("change",e=>{filtered().forEach(c=>e.target.checked?selected.add(c.id):selected.delete(c.id));renderContacts()});
+$("#contactRows").addEventListener("change",e=>{const id=e.target.dataset.sel;if(id){e.target.checked?selected.add(id):selected.delete(id);renderContacts()}});
+$("#contactRows").addEventListener("click",async e=>{const id=e.target.dataset.del;if(!id)return;
+  contacts=contacts.filter(c=>c.id!==id);selected.delete(id);renderContacts();await persistDelete(id)});
+$("#copyEmails").addEventListener("click",()=>{const t=chosenContacts().map(c=>c.email).filter(Boolean).join(", ");t?copy(t,"Email addresses copied"):toast("Select contacts with email first.")});
+$("#copyNumbers").addEventListener("click",()=>{const t=chosenContacts().map(c=>c.phone).filter(Boolean).join(", ");t?copy(t,"Phone numbers copied"):toast("Select contacts with a phone number first.")});
+$("#copyText").addEventListener("click",()=>{const t=$("#tBody").value.trim();t?copy(t,"Text message copied"):toast("Write your text first.")});
+$("#gmailBtn").addEventListener("click",e=>{if(!chosenContacts().some(c=>c.email)){e.preventDefault();toast("Tick at least one contact with an email first.");$("#emailStatus").scrollIntoView({block:"center",behavior:"smooth"})}});
+$("#copyWholeEmail").addEventListener("click",()=>{const em=chosenContacts().map(c=>c.email).filter(Boolean);
+  if(!em.length){toast("Tick at least one contact with an email first.");return}
+  copy(`BCC: ${em.join(", ")}\nSubject: ${$("#mSubject").value}\n\n${$("#mBody").value}`,"Copied. Paste it into any email app and move each part into place.")});
+$("#outlookBtn").addEventListener("click",e=>{if(!chosenContacts().some(c=>c.email)){e.preventDefault();toast("Select contacts with email first.")}});
+
+function newId(){return "c"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+async function persistAdd(list){
+  if(usingLocal){store.set("bd.contacts",contacts);return}
+  for(const c of list){const {id,...body}=c;try{await cCol.doc(id).set(body)}catch(e){toast("Couldn't save "+c.name+". Check your connection and try again.")}}}
+async function persistDelete(id){if(usingLocal){store.set("bd.contacts",contacts);return}try{await cCol.doc(id).delete()}catch(e){toast("Couldn't remove that contact. Try again.")}}
+$("#addForm").addEventListener("submit",async e=>{e.preventDefault();
+  const c={id:newId(),name:$("#cName").value.trim(),phone:$("#cPhone").value.trim(),email:$("#cEmail").value.trim(),group:$("#cGroup").value.trim(),created:Date.now()};
+  if(!c.name)return;contacts.push(c);contacts.sort((a,b)=>a.name.localeCompare(b.name));e.target.reset();renderContacts();toast("Added "+c.name);await persistAdd([c])});
+function parseCSV(text){const rows=[];let row=[],f="",q=false;
+  for(let i=0;i<text.length;i++){const ch=text[i];
+    if(q){if(ch=='"'){if(text[i+1]=='"'){f+='"';i++}else q=false}else f+=ch}
+    else if(ch=='"')q=true;else if(ch==","){row.push(f);f=""}else if(ch=="\n"||ch=="\r"){if(ch=="\r"&&text[i+1]=="\n")i++;row.push(f);rows.push(row);row=[];f=""}else f+=ch}
+  if(f||row.length){row.push(f);rows.push(row)}return rows.filter(r=>r.some(x=>x.trim()))}
+$("#csvFile").addEventListener("change",async e=>{const file=e.target.files[0];if(!file)return;
+  const rows=parseCSV(await file.text());if(rows.length<2){toast("That file has no contacts in it.");return}
+  const h=rows[0].map(x=>x.toLowerCase().trim());
+  const find=(...keys)=>h.findIndex(x=>keys.some(k=>x.includes(k)));
+  const iN=find("name"),iF=find("first"),iL=find("last"),iP=find("phone","mobile","tel"),iE=find("e-mail","email"),iG=find("group","label","tag");
+  const added=rows.slice(1).map(r=>({id:newId(),name:(iN>=0&&iF<0?r[iN]:[r[iF],r[iL]].filter(Boolean).join(" "))||r[iN]||"",phone:iP>=0?r[iP]:"",email:iE>=0?r[iE]:"",group:iG>=0?(r[iG]||"").replace(/\*?\s*myContacts\s*:::?\s*/i,"").split(":::")[0].trim():"",created:Date.now()})).filter(c=>c.name.trim()||c.email||c.phone);
+  added.forEach(c=>{if(!c.name.trim())c.name=c.email||c.phone});
+  contacts.push(...added);contacts.sort((a,b)=>a.name.localeCompare(b.name));renderContacts();toast(`Imported ${added.length} contacts`);e.target.value="";await persistAdd(added)});
+
+/* ---------- Boot ---------- */
+function useLocalContacts(reason){usingLocal=true;contacts=store.get("bd.contacts",null)||SAMPLE.map(c=>({...c,id:newId()}));
+  $("#contactStore").textContent=reason;renderContacts()}
+contacts=SAMPLE.map(c=>({...c,id:"s"+c.email}));renderContacts();
+useLocalContacts("Your contacts are saved on this computer. Only you can see them.");
+showTab();
+</script>
+
+</body>
+</html>

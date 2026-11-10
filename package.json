@@ -16,7 +16,7 @@
   "build": {
     "appId": "com.broadcastoffice.app",
     "productName": "Broadcast Office",
-    "files": ["main.js", "index.html", "build/icon.png"],
+    "files": ["main.js", "preload.js", "index.html", "build/icon.png"],
     "directories": { "output": "dist" },
     "win": {
       "target": [{ "target": "nsis", "arch": ["x64"] }],

@@ -124,6 +124,7 @@ td input[type=checkbox],th input[type=checkbox]{width:16px;height:16px;accent-co
 .mini img{width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--bg)}
 .pill.due{color:var(--warn);border-color:currentColor}
 .slots{display:grid;gap:8px}
+.photo-step{display:grid;gap:8px;background:var(--soft);border-radius:10px;padding:10px}
 .slot{display:flex;gap:8px;align-items:center}
 .slot .n{font-family:var(--mono);font-size:12px;color:var(--muted);width:18px;flex:none;text-align:right}
 .slot input{flex:1 1 auto;min-width:0}
@@ -191,7 +192,7 @@ td input[type=checkbox],th input[type=checkbox]{width:16px;height:16px;accent-co
       <h2>How posting works</h2>
       <p class="muted" style="margin:0">X, Threads, Bluesky, LinkedIn, Reddit and WhatsApp open with your text already filled in. Facebook, Instagram, TikTok and YouTube don't allow that from a web page, so the text is copied and you paste it.</p>
       <p class="muted" style="margin:0"><strong>Post to selected sites</strong> opens the first site that still needs a post. Come back, tap it again for the next one.</p>
-      <p class="muted" style="margin:0"><strong>Photos:</strong> social sites won't take a photo from another page. Tap <strong>Copy</strong> under a photo, then press Ctrl+V in the site's post box. On Instagram and TikTok, choose the same file from your computer when the site asks.</p>
+      <p class="muted" style="margin:0"><strong>Photos don't go across by themselves.</strong> Social sites only accept photos added in their own post box, so after a site opens, add the photo there: tap <strong>Copy</strong> and press Ctrl+V (X, Facebook, Threads, LinkedIn, Bluesky), or tap <strong>Save</strong> and choose the saved file (any site, including Instagram and TikTok).</p>
       <div class="note" id="runStatus">0 of 0 selected sites posted.</div>
     </div>
   </div>
@@ -256,8 +257,10 @@ td input[type=checkbox],th input[type=checkbox]{width:16px;height:16px;accent-co
         <a class="btn primary" id="gmailBtn" target="_blank" rel="noopener" href="https://mail.google.com/">Open in Gmail</a>
         <a class="btn" id="outlookBtn" target="_blank" rel="noopener" href="https://outlook.live.com/mail/0/deeplink/compose">Open in Outlook</a>
         <button id="copyEmails">Copy addresses</button>
+        <button id="copyWholeEmail">Copy whole email</button>
       </div>
       <p class="muted" style="margin:0;font-size:13px">Addresses go in BCC, so people don't see each other's emails.</p>
+      <div class="note" id="emailStatus" role="status"></div>
       <div class="addr" id="emailList">No emails selected.</div>
     </div>
     <div class="panel">
@@ -293,13 +296,13 @@ addEventListener("hashchange",showTab);
 
 /* ---------- Post ---------- */
 const P=[
- {id:"x",name:"X (Twitter)",c:"#111",l:"X",max:280,url:t=>"https://x.com/intent/post?text="+encodeURIComponent(t),prefill:true},
- {id:"facebook",name:"Facebook",c:"#1877F2",l:"f",max:63206,url:(t,link)=>link?"https://www.facebook.com/sharer/sharer.php?u="+encodeURIComponent(link):"https://www.facebook.com/",prefill:false},
+ {id:"x",paste:true,name:"X (Twitter)",c:"#111",l:"X",max:280,url:t=>"https://x.com/intent/post?text="+encodeURIComponent(t),prefill:true},
+ {id:"facebook",paste:true,name:"Facebook",c:"#1877F2",l:"f",max:63206,url:(t,link)=>link?"https://www.facebook.com/sharer/sharer.php?u="+encodeURIComponent(link):"https://www.facebook.com/",prefill:false},
  {id:"instagram",name:"Instagram",c:"#C13584",l:"IG",max:2200,url:()=>"https://www.instagram.com/",prefill:false,hint:"Add a photo or video, then paste the caption."},
- {id:"threads",name:"Threads",c:"#000",l:"@",max:500,url:t=>"https://www.threads.net/intent/post?text="+encodeURIComponent(t),prefill:true},
- {id:"linkedin",name:"LinkedIn",c:"#0A66C2",l:"in",max:3000,url:t=>"https://www.linkedin.com/feed/?shareActive=true&text="+encodeURIComponent(t),prefill:true},
+ {id:"threads",paste:true,name:"Threads",c:"#000",l:"@",max:500,url:t=>"https://www.threads.net/intent/post?text="+encodeURIComponent(t),prefill:true},
+ {id:"linkedin",paste:true,name:"LinkedIn",c:"#0A66C2",l:"in",max:3000,url:t=>"https://www.linkedin.com/feed/?shareActive=true&text="+encodeURIComponent(t),prefill:true},
  {id:"tiktok",name:"TikTok",c:"#EE1D52",l:"TT",max:2200,url:()=>"https://www.tiktok.com/upload",prefill:false,hint:"Upload a video, then paste the caption."},
- {id:"bluesky",name:"Bluesky",c:"#1185FE",l:"bs",max:300,url:t=>"https://bsky.app/intent/compose?text="+encodeURIComponent(t),prefill:true},
+ {id:"bluesky",paste:true,name:"Bluesky",c:"#1185FE",l:"bs",max:300,url:t=>"https://bsky.app/intent/compose?text="+encodeURIComponent(t),prefill:true},
  {id:"youtube",name:"YouTube Community",c:"#FF0000",l:"YT",max:5000,url:()=>"https://www.youtube.com/",prefill:false,hint:"Open your channel, then Create › Post."},
  {id:"reddit",name:"Reddit",c:"#FF4500",l:"r/",max:300,url:(t,link)=>"https://www.reddit.com/submit?title="+encodeURIComponent(t.slice(0,300))+(link?"&url="+encodeURIComponent(link):""),prefill:true,hint:"Text becomes the post title."},
  {id:"whatsapp",name:"WhatsApp Status / Chat",c:"#25D366",l:"wa",max:65536,url:t=>"https://wa.me/?text="+encodeURIComponent(t),prefill:true}
@@ -322,7 +325,9 @@ function renderPlats(){
     <div class="row" style="justify-content:space-between"><span class="mono muted">${len.toLocaleString()} / ${p.max.toLocaleString()}</span>
       ${done?'<span class="pill ok">Posted</span>':over?`<span class="pill over">${(len-p.max).toLocaleString()} too long</span>`:`<span class="pill">${p.prefill?"Text fills in":"You paste"}</span>`}</div>
     ${p.hint?`<div class="muted" style="font-size:13px">${p.hint}</div>`:""}
-    ${draft.photos.length&&p.id!=="reddit"&&p.id!=="whatsapp"?`<div class="muted" style="font-size:13px">${draft.photos.length} photo${draft.photos.length>1?"s":""} to add: copy one below your post and press Ctrl+V on the site.</div>`:""}
+    ${draft.photos.length&&p.id!=="reddit"&&p.id!=="whatsapp"?`<div class="photo-step">
+      <div style="font-size:13px"><strong>Add your photo${draft.photos.length>1?"s":""} on the site.</strong> ${p.paste?"Copy it and press Ctrl+V in the post box, or save it and choose the file.":"This site needs you to choose the file, so save it first."}</div>
+      <div class="row">${p.paste?`<button class="small" data-cpp="${p.id}">Copy photo${draft.photos.length>1?" 1":""}</button>`:""}<button class="small" data-svall="1">Save ${draft.photos.length>1?"all "+draft.photos.length+" photos":"photo"}</button></div></div>`:""}
     <div class="row"><a class="btn small ${done?"":"primary"}" data-go="${p.id}" target="_blank" rel="noopener" href="${esc(p.url(fullText(p),draft.link.trim()))}">Copy &amp; open</a>
       <button class="small ghost" data-mark="${p.id}">${done?"Undo":"Mark posted"}</button></div></div>`}).join("");
   const sel=P.filter(p=>chosen[p.id]),n=sel.filter(p=>posted.has(p.id)).length;
@@ -332,6 +337,8 @@ function saveDraft(){draft={...draft,text:$("#postText").value,link:$("#postLink
 ["#postText","#postLink","#postTags"].forEach(s=>$(s).addEventListener("input",saveDraft));
 $("#plats").addEventListener("change",e=>{const id=e.target.dataset.pick;if(id){chosen[id]=e.target.checked?1:0;store.set("bd.chosen",chosen);renderPlats()}});
 $("#plats").addEventListener("click",e=>{const go=e.target.closest("[data-go]"),mk=e.target.closest("[data-mark]");
+  if(e.target.closest("[data-cpp]")){copyPhoto(draft.photos[0]);return}
+  if(e.target.closest("[data-svall]")){saveAllPhotos();return}
   if(go){const p=P.find(x=>x.id===go.dataset.go);copy(fullText(p),"Post copied. Paste it if the text isn't filled in.");posted.add(p.id);setTimeout(renderPlats,50)}
   if(mk){const id=mk.dataset.mark;posted.has(id)?posted.delete(id):posted.add(id);renderPlats()}});
 $("#startRun").addEventListener("click",()=>{const next=P.find(p=>chosen[p.id]&&!posted.has(p.id));
@@ -387,7 +394,7 @@ function renderThumbs(){
   $("#thumbs").innerHTML=draft.photos.map(r=>`<div class="thumb">
     <img data-pid="${esc(r.id)}" alt="${esc(r.name)}">
     <button class="x" data-rm="${esc(r.id)}" aria-label="Remove ${esc(r.name)}">&times;</button>
-    <button class="small" data-cp="${esc(r.id)}">Copy</button></div>`).join("");
+    <div class="row" style="gap:4px;flex-wrap:nowrap"><button class="small" data-cp="${esc(r.id)}">Copy</button><button class="small" data-sv="${esc(r.id)}">Save</button></div></div>`).join("");
   fillImgs($("#thumbs"));
 }
 async function addPhotos(files){
@@ -400,20 +407,66 @@ async function addPhotos(files){
   }
   toast(imgs.length>1?"Photos added":"Photo added");
 }
+let downloadsCap=null;
+async function toPng(ref){
+  const url=await photoStore.url(ref);if(!url)throw new Error("missing");
+  const img=new Image();img.crossOrigin="anonymous";img.src=url;await img.decode();
+  const k=Math.min(1,4096/Math.max(img.naturalWidth,img.naturalHeight));
+  const c=document.createElement("canvas");c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);
+  c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+  return await new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error("png")),"image/png"));
+}
+async function getBlob(ref){
+  if(!ref)return null;
+  if(ref.kind==="asset"){try{const r=await fetch(await photoStore.url(ref));return r.ok?await r.blob():null}catch(e){return null}}
+  if(memBlobs[ref.id])return memBlobs[ref.id];
+  try{return await idbReq("readonly",s=>s.get(ref.id))||null}catch(e){return null}
+}
+const COPY_FAIL="Couldn't copy the photo here. Tap Save instead, then choose the saved photo when the site asks.";
 function copyPhoto(ref){
-  const png=(async()=>{
-    const url=await photoStore.url(ref);if(!url)throw new Error("missing");
-    const img=new Image();img.crossOrigin="anonymous";img.src=url;await img.decode();
-    const k=Math.min(1,4096/Math.max(img.naturalWidth,img.naturalHeight));
-    const c=document.createElement("canvas");c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);
-    c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-    return await new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error("png")),"image/png"));
-  })();
-  try{
-    navigator.clipboard.write([new ClipboardItem({"image/png":png})])
+  if(!ref){toast("That photo isn't available.");return}
+  // Windows app: use the Windows clipboard directly
+  if(window.boDesktop&&window.boDesktop.copyImage){
+    toPng(ref).then(b=>b.arrayBuffer()).then(buf=>window.boDesktop.copyImage(buf))
       .then(()=>toast("Photo copied. Press Ctrl+V in the site's post box."))
-      .catch(()=>toast("Couldn't copy the photo here. Choose the same file when the site asks for a photo."));
-  }catch(e){toast("Couldn't copy the photo here. Choose the same file when the site asks for a photo.")}
+      .catch(()=>toast(COPY_FAIL));
+    return;
+  }
+  try{
+    navigator.clipboard.write([new ClipboardItem({"image/png":toPng(ref)})])
+      .then(()=>toast("Photo copied. Press Ctrl+V in the site's post box."))
+      .catch(()=>toast(COPY_FAIL));
+  }catch(e){toast(COPY_FAIL)}
+}
+function photoFilename(ref,blob,i){
+  const extOf={"image/jpeg":"jpg","image/png":"png","image/gif":"gif","image/webp":"webp"};
+  let base=String(ref.name||"photo").replace(/\.[^.]+$/,"").replace(/[^\w\- ]+/g,"").trim().slice(0,60)||"photo";
+  let ext=(String(ref.name||"").match(/\.(jpe?g|png|gif|webp)$/i)||[])[1];
+  ext=(ext||extOf[blob&&blob.type]||"jpg").toLowerCase();
+  return `${base}${i?"-"+i:""}.${ext==="jpeg"?"jpg":ext}`;
+}
+async function savePhoto(ref,i){
+  const blob=await getBlob(ref);
+  if(!blob){toast("That photo isn't on this device any more.");return false}
+  let filename=photoFilename(ref,blob,i),data=blob;
+  if(!/\.(jpg|png|gif|webp)$/.test(filename)){data=await toPng(ref);filename=filename.replace(/\.[^.]+$/,".png")}
+  if(window.boDesktop&&window.boDesktop.savePhoto){
+    try{await window.boDesktop.savePhoto(filename,await data.arrayBuffer());toast("Saved to your Downloads folder.");return true}
+    catch(e){toast("Couldn't save the photo. Try again.");return false}
+  }
+  if(downloadsCap){
+    try{await downloadsCap.save({filename,data});toast("Saved. Choose it from your Downloads when the site asks for a photo.");return true}
+    catch(e){if(e&&e.code==="declined")return false;if(e&&e.code==="rate_limited"){toast("Finish the save that's already open first.");return false}
+      toast("Saving isn't available here. Open Broadcast Office on your computer to save photos.");return false}
+  }
+  try{
+    const a=document.createElement("a");a.href=URL.createObjectURL(data);a.download=filename;
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),30000);
+    toast("Saved to your Downloads folder.");return true;
+  }catch(e){toast("Couldn't save the photo. Try again.");return false}
+}
+async function saveAllPhotos(){
+  for(let i=0;i<draft.photos.length;i++){const ok=await savePhoto(draft.photos[i],draft.photos.length>1?i+1:0);if(!ok)break}
 }
 $("#photoInput").addEventListener("change",e=>{addPhotos(e.target.files);e.target.value=""});
 const drop=$("#drop");
@@ -422,9 +475,10 @@ const drop=$("#drop");
 drop.addEventListener("drop",e=>{e.preventDefault();if(e.dataTransfer&&e.dataTransfer.files.length)addPhotos(e.dataTransfer.files)});
 $("#postText").addEventListener("paste",e=>{const files=[...(e.clipboardData?.files||[])].filter(f=>/^image\//.test(f.type));if(files.length){e.preventDefault();addPhotos(files)}});
 $("#thumbs").addEventListener("click",e=>{
-  const rm=e.target.closest("[data-rm]"),cp=e.target.closest("[data-cp]");
+  const rm=e.target.closest("[data-rm]"),cp=e.target.closest("[data-cp]"),sv=e.target.closest("[data-sv]");
   if(rm){const ref=refIndex[rm.dataset.rm];draft.photos=draft.photos.filter(r=>r.id!==rm.dataset.rm);saveDraft();renderThumbs();photoStore.del(ref)}
   if(cp)copyPhoto(refIndex[cp.dataset.cp]);
+  if(sv)savePhoto(refIndex[sv.dataset.sv],0);
 });
 renderThumbs();
 
@@ -619,7 +673,14 @@ function renderBulk(){
   $("#emailList").textContent=emails.length?emails.join(", "):"No emails selected.";
   $("#phoneList").textContent=phones.length?phones.join(", "):"No phone numbers selected.";
   const su=$("#mSubject").value,body=$("#mBody").value,bcc=emails.join(",");
-  $("#gmailBtn").href="https://mail.google.com/mail/?view=cm&fs=1&bcc="+encodeURIComponent(bcc)+"&su="+encodeURIComponent(su)+"&body="+encodeURIComponent(body);
+  // Gmail's own handler for email links: opens a new message in your default Gmail account
+  const mailto="mailto:?bcc="+encodeURIComponent(bcc)+"&subject="+encodeURIComponent(su)+"&body="+encodeURIComponent(body);
+  $("#gmailBtn").href="https://mail.google.com/mail/?extsrc=mailto&url="+encodeURIComponent(mailto);
+  $("#gmailBtn").textContent=emails.length?`Open in Gmail (${emails.length})`:"Open in Gmail";
+  $("#outlookBtn").textContent=emails.length?`Open in Outlook (${emails.length})`:"Open in Outlook";
+  const st=$("#emailStatus");
+  if(!emails.length){st.textContent="Tick the people you want to email in Your list above. Only contacts with an email address are included.";st.style.color="var(--warn)"}
+  else{const missing=sel.length-emails.length;st.textContent=`Ready: ${emails.length} recipient${emails.length>1?"s":""} in BCC.`+(missing?` ${missing} selected contact${missing>1?"s have":" has"} no email and will be left out.`:"")+" Gmail opens a new message. Check it, then click Send.";st.style.color=""}
   $("#outlookBtn").href="https://outlook.live.com/mail/0/deeplink/compose?bcc="+encodeURIComponent(bcc)+"&subject="+encodeURIComponent(su)+"&body="+encodeURIComponent(body);
   document.querySelectorAll("[data-wa]").forEach(a=>{const c=contacts.find(x=>x.id===a.dataset.wa);a.href="https://wa.me/"+digits(c.phone)+($("#tBody").value?"?text="+encodeURIComponent($("#tBody").value):"")});
 }
@@ -633,7 +694,10 @@ $("#contactRows").addEventListener("click",async e=>{const id=e.target.dataset.d
 $("#copyEmails").addEventListener("click",()=>{const t=chosenContacts().map(c=>c.email).filter(Boolean).join(", ");t?copy(t,"Email addresses copied"):toast("Select contacts with email first.")});
 $("#copyNumbers").addEventListener("click",()=>{const t=chosenContacts().map(c=>c.phone).filter(Boolean).join(", ");t?copy(t,"Phone numbers copied"):toast("Select contacts with a phone number first.")});
 $("#copyText").addEventListener("click",()=>{const t=$("#tBody").value.trim();t?copy(t,"Text message copied"):toast("Write your text first.")});
-$("#gmailBtn").addEventListener("click",e=>{if(!chosenContacts().some(c=>c.email)){e.preventDefault();toast("Select contacts with email first.")}});
+$("#gmailBtn").addEventListener("click",e=>{if(!chosenContacts().some(c=>c.email)){e.preventDefault();toast("Tick at least one contact with an email first.");$("#emailStatus").scrollIntoView({block:"center",behavior:"smooth"})}});
+$("#copyWholeEmail").addEventListener("click",()=>{const em=chosenContacts().map(c=>c.email).filter(Boolean);
+  if(!em.length){toast("Tick at least one contact with an email first.");return}
+  copy(`BCC: ${em.join(", ")}\nSubject: ${$("#mSubject").value}\n\n${$("#mBody").value}`,"Copied. Paste it into any email app and move each part into place.")});
 $("#outlookBtn").addEventListener("click",e=>{if(!chosenContacts().some(c=>c.email)){e.preventDefault();toast("Select contacts with email first.")}});
 
 function newId(){return "c"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
