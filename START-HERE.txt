@@ -1,0 +1,13 @@
+Broadcast Office - all files
+
+Website/
+  broadcast-office-website.html
+  Upload to Hostinger (File Manager > public_html), replacing the old file.
+
+Windows-App/
+  The Windows app project. To update your GitHub repository, upload:
+  index.html, main.js, preload.js, package.json, README.md
+  then download the new installer from the Actions tab.
+  Starting fresh? Follow Windows-App/README.md.
+  Note: the .github folder is hidden on some computers. It holds
+  .github/workflows/build.yml, which GitHub needs to build the app.

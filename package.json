@@ -1,7 +1,7 @@
 {
   "name": "broadcast-office",
   "productName": "Broadcast Office",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Write one post for all your social sites and email or text your contacts.",
   "author": "Broadcast Office",
   "main": "main.js",

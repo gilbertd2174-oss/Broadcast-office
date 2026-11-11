@@ -125,6 +125,19 @@ td input[type=checkbox],th input[type=checkbox]{width:16px;height:16px;accent-co
 .pill.due{color:var(--warn);border-color:currentColor}
 .slots{display:grid;gap:8px}
 .photo-step{display:grid;gap:8px;background:var(--soft);border-radius:10px;padding:10px}
+.thumb video{width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid var(--line);display:block;background:#000}
+.thumb .vtag,.mini .vtag{position:absolute;left:4px;bottom:34px;font:600 10px/1 var(--body);background:rgba(0,0,0,.65);color:#fff;padding:3px 5px;border-radius:4px}
+.mini{position:relative}
+.mini video{width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:#000}
+.direct{border-color:var(--accent)}
+.direct-form{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.results{display:grid;gap:6px}
+.results:empty{display:none}
+.res{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:14px}
+.res strong{min-width:110px}
+.res .rmsg{color:var(--muted);font-size:13px;flex:1 1 200px;min-width:0;overflow-wrap:anywhere}
+.pill.fail{color:var(--bad);border-color:currentColor}
+.pill.auto{color:var(--ok);border-color:currentColor}
 .slot{display:flex;gap:8px;align-items:center}
 .slot .n{font-family:var(--mono);font-size:12px;color:var(--muted);width:18px;flex:none;text-align:right}
 .slot input{flex:1 1 auto;min-width:0}
@@ -159,12 +172,12 @@ td input[type=checkbox],th input[type=checkbox]{width:16px;height:16px;accent-co
       </div>
       <label for="postTags">Hashtags (optional)</label>
       <input id="postTags" placeholder="#sale #weekend">
-      <label>Photos (optional)</label>
+      <label>Photos or video (optional)</label>
       <div class="drop" id="drop">
         <div class="row">
-          <label for="photoInput" class="btn small btnlabel">Add photos</label>
-          <input id="photoInput" type="file" accept="image/*" multiple hidden>
-          <span class="muted" style="font-size:13px">or drag them here. JPG, PNG, GIF or WebP, up to 20 MB each.</span>
+          <label for="photoInput" class="btn small btnlabel">Add photos or video</label>
+          <input id="photoInput" type="file" accept="image/*,video/*" multiple hidden>
+          <span class="muted" style="font-size:13px">or drag them here. Photos up to 20 MB each, or one video (MP4, MOV or WebM) up to 500 MB.</span>
         </div>
         <div class="thumbs" id="thumbs"></div>
       </div>
@@ -184,6 +197,7 @@ td input[type=checkbox],th input[type=checkbox]{width:16px;height:16px;accent-co
           <button class="small" id="addSlot">Add another time</button>
           <button class="small ghost" id="fillWeek">Same time, next 7 days</button>
         </div>
+        <label class="toggle" id="autoPostWrap" hidden><input type="checkbox" id="autoPost" checked> Post automatically with Upload-Post at each time, even when the app is closed</label>
         <div class="row"><button id="schedBtn">Schedule post</button></div>
         <p class="muted" style="margin:0;font-size:13px">Add up to 7 days and times. Each one becomes its own scheduled post. At each time Broadcast Office reminds you and loads the post, photos and sites with one click. It reminds you while it's open, so add a calendar reminder to get an alert on your phone too.</p>
       </div>
@@ -192,9 +206,33 @@ td input[type=checkbox],th input[type=checkbox]{width:16px;height:16px;accent-co
       <h2>How posting works</h2>
       <p class="muted" style="margin:0">X, Threads, Bluesky, LinkedIn, Reddit and WhatsApp open with your text already filled in. Facebook, Instagram, TikTok and YouTube don't allow that from a web page, so the text is copied and you paste it.</p>
       <p class="muted" style="margin:0"><strong>Post to selected sites</strong> opens the first site that still needs a post. Come back, tap it again for the next one.</p>
-      <p class="muted" style="margin:0"><strong>Photos don't go across by themselves.</strong> Social sites only accept photos added in their own post box, so after a site opens, add the photo there: tap <strong>Copy</strong> and press Ctrl+V (X, Facebook, Threads, LinkedIn, Bluesky), or tap <strong>Save</strong> and choose the saved file (any site, including Instagram and TikTok).</p>
+      <p class="muted" style="margin:0"><strong>Photos and videos:</strong> the quickest way is <strong>Post directly</strong> below, which uploads them to every site for you (Windows app). Otherwise, after a site opens, add them in its post box: tap <strong>Copy</strong> on a photo and press Ctrl+V, or tap <strong>Save</strong> and choose the saved file.</p>
       <div class="note" id="runStatus">0 of 0 selected sites posted.</div>
     </div>
+  </div>
+  <div class="panel direct" id="directPanel">
+    <div class="row"><h2 class="grow">Post directly</h2><span class="pill" id="upState">Windows app</span></div>
+    <p class="muted" style="margin:0" id="upIntro">Upload your photo or video and post it to every selected site in one step, with no copying or saving. This uses a free Upload-Post account (10 uploads a month free) and works in the Broadcast Office Windows app.</p>
+    <div id="upSetup" hidden style="display:grid;gap:10px">
+      <ol class="muted" style="margin:0;padding-left:20px;font-size:14px">
+        <li>Sign up free at <a href="https://app.upload-post.com" target="_blank" rel="noopener">app.upload-post.com</a>.</li>
+        <li>Open <a href="https://app.upload-post.com/manage-users" target="_blank" rel="noopener">Manage Users</a>, create a profile (for example <span class="mono">broadcast</span>) and connect your TikTok, YouTube, Instagram, Facebook and other accounts to it.</li>
+        <li>Open <a href="https://app.upload-post.com/settings/api" target="_blank" rel="noopener">API Keys</a>, generate a key, and paste it below with your profile name.</li>
+      </ol>
+      <div class="direct-form">
+        <div><label for="upKey">API key</label><input id="upKey" type="password" autocomplete="off" placeholder="Paste your Upload-Post API key"></div>
+        <div><label for="upUser">Profile name</label><input id="upUser" autocomplete="off" placeholder="broadcast"></div>
+        <div><label for="upFbPage">Facebook Page ID (optional)</label><input id="upFbPage" autocomplete="off" placeholder="Only if you have several Pages"></div>
+      </div>
+      <div class="row"><button class="primary" id="upSave">Save settings</button><button class="ghost" id="upCancel">Cancel</button><button class="ghost" id="upForget" hidden>Remove key from this computer</button></div>
+      <p class="muted" style="margin:0;font-size:13px">Your key is stored encrypted on this computer and is only sent to Upload-Post.</p>
+    </div>
+    <div class="row" id="upActions" hidden>
+      <button class="primary" id="directPost">Post now</button>
+      <button class="ghost" id="upSettingsBtn">Upload-Post settings</button>
+      <span class="muted" style="font-size:13px" id="upNote"></span>
+    </div>
+    <div class="results" id="upResults"></div>
   </div>
   <div class="plats" id="plats"></div>
 </section>
@@ -303,7 +341,7 @@ const P=[
  {id:"linkedin",paste:true,name:"LinkedIn",c:"#0A66C2",l:"in",max:3000,url:t=>"https://www.linkedin.com/feed/?shareActive=true&text="+encodeURIComponent(t),prefill:true},
  {id:"tiktok",name:"TikTok",c:"#EE1D52",l:"TT",max:2200,url:()=>"https://www.tiktok.com/upload",prefill:false,hint:"Upload a video, then paste the caption."},
  {id:"bluesky",paste:true,name:"Bluesky",c:"#1185FE",l:"bs",max:300,url:t=>"https://bsky.app/intent/compose?text="+encodeURIComponent(t),prefill:true},
- {id:"youtube",name:"YouTube Community",c:"#FF0000",l:"YT",max:5000,url:()=>"https://www.youtube.com/",prefill:false,hint:"Open your channel, then Create › Post."},
+ {id:"youtube",name:"YouTube",c:"#FF0000",l:"YT",max:5000,url:()=>"https://www.youtube.com/",prefill:false,hint:"For a video, open YouTube Studio and choose Create › Upload videos. For text, use Create › Post."},
  {id:"reddit",name:"Reddit",c:"#FF4500",l:"r/",max:300,url:(t,link)=>"https://www.reddit.com/submit?title="+encodeURIComponent(t.slice(0,300))+(link?"&url="+encodeURIComponent(link):""),prefill:true,hint:"Text becomes the post title."},
  {id:"whatsapp",name:"WhatsApp Status / Chat",c:"#25D366",l:"wa",max:65536,url:t=>"https://wa.me/?text="+encodeURIComponent(t),prefill:true}
 ];
@@ -325,24 +363,23 @@ function renderPlats(){
     <div class="row" style="justify-content:space-between"><span class="mono muted">${len.toLocaleString()} / ${p.max.toLocaleString()}</span>
       ${done?'<span class="pill ok">Posted</span>':over?`<span class="pill over">${(len-p.max).toLocaleString()} too long</span>`:`<span class="pill">${p.prefill?"Text fills in":"You paste"}</span>`}</div>
     ${p.hint?`<div class="muted" style="font-size:13px">${p.hint}</div>`:""}
-    ${draft.photos.length&&p.id!=="reddit"&&p.id!=="whatsapp"?`<div class="photo-step">
-      <div style="font-size:13px"><strong>Add your photo${draft.photos.length>1?"s":""} on the site.</strong> ${p.paste?"Copy it and press Ctrl+V in the post box, or save it and choose the file.":"This site needs you to choose the file, so save it first."}</div>
-      <div class="row">${p.paste?`<button class="small" data-cpp="${p.id}">Copy photo${draft.photos.length>1?" 1":""}</button>`:""}<button class="small" data-svall="1">Save ${draft.photos.length>1?"all "+draft.photos.length+" photos":"photo"}</button></div></div>`:""}
+    ${mediaStep(p)}
     <div class="row"><a class="btn small ${done?"":"primary"}" data-go="${p.id}" target="_blank" rel="noopener" href="${esc(p.url(fullText(p),draft.link.trim()))}">Copy &amp; open</a>
       <button class="small ghost" data-mark="${p.id}">${done?"Undo":"Mark posted"}</button></div></div>`}).join("");
   const sel=P.filter(p=>chosen[p.id]),n=sel.filter(p=>posted.has(p.id)).length;
   $("#runStatus").textContent=`${n} of ${sel.length} selected sites posted.`+(sel.length&&n===sel.length?" All done.":"");
+  updateDirectUI();
 }
 function saveDraft(){draft={...draft,text:$("#postText").value,link:$("#postLink").value,tags:$("#postTags").value};store.set("bd.draft",draft);renderPlats()}
 ["#postText","#postLink","#postTags"].forEach(s=>$(s).addEventListener("input",saveDraft));
 $("#plats").addEventListener("change",e=>{const id=e.target.dataset.pick;if(id){chosen[id]=e.target.checked?1:0;store.set("bd.chosen",chosen);renderPlats()}});
 $("#plats").addEventListener("click",e=>{const go=e.target.closest("[data-go]"),mk=e.target.closest("[data-mark]");
-  if(e.target.closest("[data-cpp]")){copyPhoto(draft.photos[0]);return}
+  if(e.target.closest("[data-cpp]")){copyPhoto(draft.photos.find(r=>!isVideo(r)));return}
   if(e.target.closest("[data-svall]")){saveAllPhotos();return}
   if(go){const p=P.find(x=>x.id===go.dataset.go);copy(fullText(p),"Post copied. Paste it if the text isn't filled in.");posted.add(p.id);setTimeout(renderPlats,50)}
   if(mk){const id=mk.dataset.mark;posted.has(id)?posted.delete(id):posted.add(id);renderPlats()}});
 $("#startRun").addEventListener("click",()=>{const next=P.find(p=>chosen[p.id]&&!posted.has(p.id));
-  if(!draft.text.trim()&&!draft.photos.length){toast("Write your post or add a photo first.");return}
+  if(!draft.text.trim()&&!draft.photos.length){toast("Write your post or add a photo or video first.");return}
   if(!next){toast("Every selected site is marked posted.");return}
   document.querySelector(`[data-go="${next.id}"]`).click()});
 document.querySelectorAll("[data-hub]").forEach(a=>a.addEventListener("click",e=>{if(!draft.text.trim()){e.preventDefault();toast("Write your post first.");return}
@@ -358,11 +395,11 @@ async function idbReq(mode,fn){const d=await idb();return new Promise((res,rej)=
 const photoStore={
   assets:null,
   async put(file){
-    const name=file.name||"photo";
-    if(this.assets){try{const r=await this.assets.upload(file);return {id:r.id,url:r.url,kind:"asset",name}}catch(e){}}
+    const name=file.name||"photo",type=file.type||"";
+    if(this.assets&&file.size<=20*1024*1024){try{const r=await this.assets.upload(file);return {id:r.id,url:r.url,kind:"asset",name,type}}catch(e){}}
     const id="p"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-    try{await idbReq("readwrite",s=>s.put(file,id));return {id,kind:"idb",name}}
-    catch(e){memBlobs[id]=file;return {id,kind:"mem",name}}
+    try{await idbReq("readwrite",s=>s.put(file,id));return {id,kind:"idb",name,type}}
+    catch(e){memBlobs[id]=file;return {id,kind:"mem",name,type}}
   },
   async url(ref){
     if(!ref)return "";
@@ -384,22 +421,43 @@ const photoStore={
 function inUse(id){return draft.photos.some(r=>r.id===id)||queue.some(it=>(it.photos||[]).some(r=>r.id===id))}
 function indexRefs(list){(list||[]).forEach(r=>{if(r&&r.id)refIndex[r.id]=r})}
 async function fillImgs(root){
-  for(const img of root.querySelectorAll("img[data-pid]")){
-    const url=await photoStore.url(refIndex[img.dataset.pid]);
-    if(url)img.src=url;else img.alt="Photo not found on this device";
+  for(const el of root.querySelectorAll("img[data-pid],video[data-pid]")){
+    const url=await photoStore.url(refIndex[el.dataset.pid]);
+    if(url)el.src=url;else if(el.tagName==="IMG")el.alt="Not found on this device";
   }
 }
 function renderThumbs(){
   indexRefs(draft.photos);
-  $("#thumbs").innerHTML=draft.photos.map(r=>`<div class="thumb">
+  $("#thumbs").innerHTML=draft.photos.map(r=>isVideo(r)?`<div class="thumb">
+    <video data-pid="${esc(r.id)}" muted playsinline preload="metadata" aria-label="${esc(r.name)}"></video><span class="vtag">VIDEO</span>
+    <button class="x" data-rm="${esc(r.id)}" aria-label="Remove ${esc(r.name)}">&times;</button>
+    <button class="small" data-sv="${esc(r.id)}">Save</button></div>`:`<div class="thumb">
     <img data-pid="${esc(r.id)}" alt="${esc(r.name)}">
     <button class="x" data-rm="${esc(r.id)}" aria-label="Remove ${esc(r.name)}">&times;</button>
     <div class="row" style="gap:4px;flex-wrap:nowrap"><button class="small" data-cp="${esc(r.id)}">Copy</button><button class="small" data-sv="${esc(r.id)}">Save</button></div></div>`).join("");
   fillImgs($("#thumbs"));
 }
+function isVideo(r){return !!r&&(/^video\//.test(r.type||"")||/\.(mp4|mov|webm|m4v)$/i.test(r.name||""))}
+function mediaKind(d){const ps=(d&&d.photos)||[];return ps.some(isVideo)?"video":ps.length?"photo":null}
+function mediaStep(p){
+  if(!draft.photos.length||p.id==="reddit"||p.id==="whatsapp")return "";
+  if(mediaKind(draft)==="video")return `<div class="photo-step"><div style="font-size:13px"><strong>Add your video on the site.</strong> Save it, then choose the file when the site asks. Or use Post directly above.</div>
+    <div class="row"><button class="small" data-svall="1">Save video</button></div></div>`;
+  const n=draft.photos.length;
+  return `<div class="photo-step"><div style="font-size:13px"><strong>Add your photo${n>1?"s":""} on the site.</strong> ${p.paste?"Copy it and press Ctrl+V in the post box, or save it and choose the file.":"This site needs you to choose the file, so save it first."}</div>
+    <div class="row">${p.paste?`<button class="small" data-cpp="${p.id}">Copy photo${n>1?" 1":""}</button>`:""}<button class="small" data-svall="1">Save ${n>1?"all "+n+" photos":"photo"}</button></div></div>`;
+}
 async function addPhotos(files){
-  const imgs=[...files].filter(f=>/^image\//.test(f.type));
-  if(!imgs.length){toast("Choose image files: JPG, PNG, GIF or WebP.");return}
+  const all=[...files],imgs=all.filter(f=>/^image\//.test(f.type)),vids=all.filter(f=>/^video\//.test(f.type));
+  if(!imgs.length&&!vids.length){toast("Choose photos (JPG, PNG, GIF, WebP) or a video (MP4, MOV, WebM).");return}
+  if(vids.length){
+    if(vids.length>1||imgs.length){toast("A post can have several photos or one video, not both. Add one video on its own.");return}
+    if(draft.photos.length){toast("Remove the photos first. A post can have photos or one video, not both.");return}
+    const v=vids[0];if(v.size>500*1024*1024){toast(v.name+" is over 500 MB. Choose a shorter or smaller video.");return}
+    toast("Adding video…");
+    const ref=await photoStore.put(v);draft.photos=[ref];saveDraft();renderThumbs();toast("Video added");return;
+  }
+  if(mediaKind(draft)==="video"){toast("Remove the video first. A post can have photos or one video, not both.");return}
   for(const f of imgs){
     if(f.size>20*1024*1024){toast(f.name+" is over 20 MB. Choose a smaller photo.");continue}
     const ref=await photoStore.put(f);
@@ -439,23 +497,23 @@ function copyPhoto(ref){
   }catch(e){toast(COPY_FAIL)}
 }
 function photoFilename(ref,blob,i){
-  const extOf={"image/jpeg":"jpg","image/png":"png","image/gif":"gif","image/webp":"webp"};
+  const extOf={"image/jpeg":"jpg","image/png":"png","image/gif":"gif","image/webp":"webp","video/mp4":"mp4","video/quicktime":"mov","video/webm":"webm"};
   let base=String(ref.name||"photo").replace(/\.[^.]+$/,"").replace(/[^\w\- ]+/g,"").trim().slice(0,60)||"photo";
-  let ext=(String(ref.name||"").match(/\.(jpe?g|png|gif|webp)$/i)||[])[1];
+  let ext=(String(ref.name||"").match(/\.(jpe?g|png|gif|webp|mp4|mov|webm)$/i)||[])[1];
   ext=(ext||extOf[blob&&blob.type]||"jpg").toLowerCase();
   return `${base}${i?"-"+i:""}.${ext==="jpeg"?"jpg":ext}`;
 }
 async function savePhoto(ref,i){
   const blob=await getBlob(ref);
-  if(!blob){toast("That photo isn't on this device any more.");return false}
+  if(!blob){toast("That file isn't on this device any more.");return false}
   let filename=photoFilename(ref,blob,i),data=blob;
-  if(!/\.(jpg|png|gif|webp)$/.test(filename)){data=await toPng(ref);filename=filename.replace(/\.[^.]+$/,".png")}
+  if(!isVideo(ref)&&!/\.(jpg|png|gif|webp)$/.test(filename)){data=await toPng(ref);filename=filename.replace(/\.[^.]+$/,".png")}
   if(window.boDesktop&&window.boDesktop.savePhoto){
     try{await window.boDesktop.savePhoto(filename,await data.arrayBuffer());toast("Saved to your Downloads folder.");return true}
-    catch(e){toast("Couldn't save the photo. Try again.");return false}
+    catch(e){toast("Couldn't save it. Try again.");return false}
   }
   if(downloadsCap){
-    try{await downloadsCap.save({filename,data});toast("Saved. Choose it from your Downloads when the site asks for a photo.");return true}
+    try{await downloadsCap.save({filename,data});toast("Saved. Choose it from your Downloads when the site asks.");return true}
     catch(e){if(e&&e.code==="declined")return false;if(e&&e.code==="rate_limited"){toast("Finish the save that's already open first.");return false}
       toast("Saving isn't available here. Open Broadcast Office on your computer to save photos.");return false}
   }
@@ -481,6 +539,137 @@ $("#thumbs").addEventListener("click",e=>{
   if(sv)savePhoto(refIndex[sv.dataset.sv],0);
 });
 renderThumbs();
+
+/* ---------- Post directly (Upload-Post, Windows app) ---------- */
+var upCfg={hasKey:false,user:"",facebookPageId:""},upShowSetup=false,upBusy=false,upLoaded=false;
+const UP_SUPPORTED={video:["x","facebook","instagram","threads","linkedin","tiktok","bluesky","youtube"],
+                    photo:["x","facebook","instagram","threads","linkedin","tiktok","bluesky"]};
+function hasDirect(){return !!(window.boDesktop&&window.boDesktop.upPublish)}
+function upReady(){return hasDirect()&&upCfg.hasKey&&!!upCfg.user}
+function upPlatforms(kind,ids){return (ids||[]).filter(id=>(UP_SUPPORTED[kind]||[]).includes(id))}
+const pName=id=>(P.find(p=>p.id===id)||{name:id}).name;
+const cut=(t,n)=>{const a=[...String(t||"")];return a.length>n?a.slice(0,n-1).join("")+"…":a.join("")};
+function composeText(d){let t=(d.text||"").trim();if((d.tags||"").trim())t+="\n\n"+d.tags.trim();if((d.link||"").trim())t+="\n"+d.link.trim();return t}
+function updateDirectUI(){
+  const st=$("#upState");if(!st||!upLoaded)return;
+  const kind=mediaKind(draft),sel=P.filter(p=>chosen[p.id]).map(p=>p.id);
+  if(!hasDirect()){
+    st.textContent="Windows app";$("#upSetup").hidden=true;$("#upActions").hidden=true;$("#autoPostWrap").hidden=true;return;
+  }
+  $("#upIntro").textContent="Upload your photo or video and post it to every selected site in one step, with no copying or saving. Uses your free Upload-Post account (10 uploads a month free).";
+  const ready=upReady();
+  st.textContent=ready?"Ready · "+upCfg.user:"Not set up";st.className="pill"+(ready?" ok":"");
+  $("#upSetup").hidden=ready&&!upShowSetup;
+  $("#upForget").hidden=!upCfg.hasKey;$("#upCancel").hidden=!ready;
+  $("#upActions").hidden=!ready||upShowSetup;
+  const ups=kind?upPlatforms(kind,sel):[],skipped=kind?sel.filter(id=>!ups.includes(id)):[];
+  const btn=$("#directPost");
+  if(!upBusy){btn.textContent=kind?`Post ${kind} now to ${ups.length} site${ups.length===1?"":"s"}`:"Post now";btn.disabled=!kind||!ups.length}
+  $("#upNote").textContent=!kind?"Add a photo or video above to post directly.":
+    (skipped.length?`Not included: ${skipped.map(pName).join(", ")} (use Copy & open for ${skipped.length>1?"those":"that one"}).`:"");
+  $("#autoPostWrap").hidden=!(ready&&kind);
+}
+async function loadUpCfg(){if(!hasDirect())return;try{upCfg=await window.boDesktop.upGetConfig()}catch(e){}$("#upUser").value=upCfg.user||"";$("#upFbPage").value=upCfg.facebookPageId||"";updateDirectUI()}
+$("#upSettingsBtn").addEventListener("click",()=>{upShowSetup=true;updateDirectUI();$("#upKey").focus()});
+$("#upCancel").addEventListener("click",()=>{upShowSetup=false;updateDirectUI()});
+$("#upSave").addEventListener("click",async()=>{
+  const apiKey=$("#upKey").value.trim(),user=$("#upUser").value.trim(),facebookPageId=$("#upFbPage").value.trim();
+  if(!apiKey&&!upCfg.hasKey){toast("Paste your Upload-Post API key first.");$("#upKey").focus();return}
+  if(!user){toast("Type your Upload-Post profile name.");$("#upUser").focus();return}
+  try{await window.boDesktop.upSaveConfig({apiKey,user,facebookPageId});$("#upKey").value="";upShowSetup=false;await loadUpCfg();toast("Upload-Post settings saved.")}
+  catch(e){toast("Couldn't save the settings. Try again.")}
+});
+$("#upForget").addEventListener("click",async()=>{try{await window.boDesktop.upClearConfig()}catch(e){}upShowSetup=true;await loadUpCfg();toast("Removed your Upload-Post key from this computer.")});
+function upFields(d,kind,extra){
+  const text=composeText(d),first=(d.text||"").trim().split("\n")[0]||"New video";
+  const f={title:cut(text,2200),x_title:cut(text,280),threads_title:cut(text,500),bluesky_title:cut(text,300),
+           linkedin_title:cut(text,3000),facebook_title:cut(text,5000),instagram_title:cut(text,2200)};
+  if(kind==="video"){Object.assign(f,{tiktok_title:cut(text,2200),youtube_title:cut(first,100),youtube_description:cut(text,5000),description:cut(text,5000)})}
+  else{Object.assign(f,{tiktok_description:cut(text,2200),description:cut(text,5000)})}
+  return Object.assign(f,extra||{});
+}
+class UpError extends Error{constructor(msg,body){super(msg);this.body=body||{}}}
+async function upSend(d,platforms,extra){
+  const kind=mediaKind(d);if(!kind)throw new UpError("Add a photo or video first.");
+  const refs=kind==="video"?[d.photos.find(isVideo)]:d.photos.filter(r=>!isVideo(r));
+  const files=[];
+  for(const r of refs){const b=await getBlob(r);if(!b)throw new UpError("One of your files isn't on this computer any more. Add it again.");
+    files.push({name:r.name||(kind==="video"?"video.mp4":"photo.jpg"),type:b.type||r.type||"",bytes:await b.arrayBuffer()})}
+  const requestId="bo-"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  const fields=upFields(d,kind,Object.assign({request_id:requestId},extra));
+  let res;
+  try{res=await window.boDesktop.upPublish({kind,platforms,fields,files,requestId})}
+  catch(e){throw new UpError("Couldn't reach Upload-Post. Check your internet connection and try again.")}
+  const b=res&&res.body||{};
+  if(!res.ok||b.success===false){
+    let msg=b.message||b.error||`Upload-Post returned an error (${res.status}).`;
+    if(res.status===401)msg="Upload-Post didn't accept your API key. Open Upload-Post settings and paste it again.";
+    if(res.status===429)msg="You've used all your Upload-Post uploads for this month. "+(b.message||"");
+    throw new UpError(msg,b);
+  }
+  return Object.assign({request_id:requestId},b);
+}
+function showUpError(e){
+  const b=(e&&e.body)||{},pages=b.available_pages;
+  let html=`<div class="res"><span class="pill fail">Not posted</span><span class="rmsg">${esc(e&&e.message||"Something went wrong.")}</span></div>`;
+  if(Array.isArray(pages)&&pages.length){
+    html+=`<div class="res"><span class="rmsg">You have more than one Facebook Page. Pick the one to post to, then try again:</span>`+
+      pages.map(p=>{const id=p&&(p.id||p.page_id),nm=p&&(p.name||p.page_name)||id;return id?`<button class="small" data-fbpage="${esc(id)}">${esc(nm)}</button>`:""}).join("")+`</div>`;
+  }
+  $("#upResults").innerHTML=html;
+  toast(e&&e.message||"Not posted.");
+}
+$("#upResults").addEventListener("click",async e=>{
+  const b=e.target.closest("[data-fbpage]");if(!b)return;
+  try{await window.boDesktop.upSaveConfig({apiKey:"",user:upCfg.user,facebookPageId:b.dataset.fbpage});await loadUpCfg();toast("Facebook Page saved. Tap Post now again.")}
+  catch(err){toast("Couldn't save the Page. Try again.")}
+});
+function renderResults(list,overall){
+  const icon=r=>r.success===true||r.status==="completed"?'<span class="pill ok">Posted</span>':
+    (r.success===false||r.status==="failed")?'<span class="pill fail">Failed</span>':'<span class="pill">Working…</span>';
+  $("#upResults").innerHTML=(overall?`<div class="muted" style="font-size:13px">${esc(overall)}</div>`:"")+list.map(r=>{
+    const url=r.post_url||r.url;
+    return `<div class="res"><strong>${esc(pName(r.platform))}</strong>${icon(r)}<span class="rmsg">${esc(r.message&&r.success!==true?r.message:"")}</span>${url?`<a class="btn small" href="${esc(url)}" target="_blank" rel="noopener">View post</a>`:""}</div>`}).join("");
+  list.forEach(r=>{if(r.success===true||r.status==="completed"){posted.add(r.platform)}});
+}
+async function pollStatus(q,platforms){
+  for(let i=0;i<150;i++){
+    await new Promise(r=>setTimeout(r,i<6?3000:6000));
+    let res;try{res=await window.boDesktop.upStatus(q)}catch(e){continue}
+    const b=res&&res.body||{};
+    const results=Array.isArray(b.results)?b.results:[];
+    const byP=Object.fromEntries(results.map(r=>[r.platform,r]));
+    renderResults(platforms.map(p=>byP[p]||{platform:p}),b.status==="completed"?"All done.":b.status==="failed"?(b.message||"Upload-Post couldn't finish."):`Uploading… ${b.completed||0} of ${b.total||platforms.length} sites finished.`);
+    renderPlats();
+    if(["completed","failed","not_found"].includes(b.status))return b;
+  }
+  return null;
+}
+$("#directPost").addEventListener("click",async()=>{
+  if(upBusy)return;
+  const kind=mediaKind(draft),ups=upPlatforms(kind,P.filter(p=>chosen[p.id]).map(p=>p.id));
+  if(!kind||!ups.length)return;
+  const btn=$("#directPost");upBusy=true;btn.disabled=true;btn.textContent=kind==="video"?"Uploading video…":"Uploading photos…";
+  renderResults(ups.map(p=>({platform:p})),"Sending to Upload-Post. Videos can take a few minutes.");
+  try{
+    const b=await upSend(draft,ups,{async_upload:"true"});
+    if(b.results&&!Array.isArray(b.results)){renderResults(Object.entries(b.results).map(([platform,r])=>Object.assign({platform},r)),"Done.");renderPlats()}
+    else await pollStatus({requestId:b.request_id},ups);
+  }catch(e){showUpError(e)}
+  upBusy=false;updateDirectUI();
+});
+async function checkJob(id,btn){
+  const it=queue.find(i=>i.id===id);if(!it||!it.jobId)return;
+  btn.disabled=true;
+  try{const res=await window.boDesktop.upStatus({jobId:it.jobId});const b=res&&res.body||{};
+    const parts=(Array.isArray(b.results)?b.results:[]).map(r=>`${pName(r.platform)}: ${r.success?"posted":r.status||"waiting"}`);
+    toast(b.status?`Upload-Post: ${b.status.replace("_"," ")}${parts.length?" · "+parts.join(", "):""}`:(b.message||"No status yet."))}
+  catch(e){toast("Couldn't reach Upload-Post. Try again.")}
+  btn.disabled=false;
+}
+upLoaded=true;
+loadUpCfg();
+updateDirectUI();
 
 /* ---------- Schedule ---------- */
 let queue=store.get("bd.queue",[]),qCol=null;
@@ -510,22 +699,23 @@ function loadIntoComposer(it){
 function renderQueue(){
   queue.forEach(it=>indexRefs(it.photos));
   const now=Date.now();
-  const open=queue.filter(i=>i.status!=="posted").sort((a,b)=>a.at-b.at);
-  const done=queue.filter(i=>i.status==="posted").sort((a,b)=>b.at-a.at);
-  const due=open.filter(i=>i.at<=now);
+  const open=queue.filter(i=>i.status!=="posted"&&!(i.auto&&i.at<=now)).sort((a,b)=>a.at-b.at);
+  const done=queue.filter(i=>i.status==="posted"||(i.auto&&i.at<=now)).sort((a,b)=>b.at-a.at);
+  const due=open.filter(i=>i.at<=now&&!i.auto);
   $("#qCount").textContent=open.length?String(open.length):"";
   const card=it=>{
-    const isDue=it.status!=="posted"&&it.at<=now,isDone=it.status==="posted";
+    const isDue=it.status!=="posted"&&it.at<=now&&!it.auto,isDone=it.status==="posted"||(it.auto&&it.at<=now);
     const names=P.filter(p=>(it.platforms||[]).includes(p.id)).map(p=>p.name).join(", ")||"No sites picked";
     return `<div class="qitem ${isDue?"is-due":""} ${isDone?"is-done":""}">
       <div class="qwhen"><span>${esc(fmtWhen(it.at))}</span>
-        ${isDone?'<span class="pill ok">Posted</span>':isDue?'<span class="pill due">Due now</span>':'<span class="pill">Upcoming</span>'}</div>
+        ${it.auto?(it.at<=now?'<span class="pill auto">Sent by Upload-Post</span>':'<span class="pill auto">Posts automatically</span>'):isDone?'<span class="pill ok">Posted</span>':isDue?'<span class="pill due">Due now</span>':'<span class="pill">Upcoming</span>'}</div>
       <div style="display:grid;gap:8px;min-width:0">
         <p class="qtext">${esc(excerpt(itemText(it),280))}</p>
-        <div class="mini">${(it.photos||[]).map(r=>`<img data-pid="${esc(r.id)}" alt="${esc(r.name)}">`).join("")}</div>
+        <div class="mini">${(it.photos||[]).map(r=>isVideo(r)?`<video data-pid="${esc(r.id)}" muted playsinline preload="metadata"></video>`:`<img data-pid="${esc(r.id)}" alt="${esc(r.name)}">`).join("")}</div>
         <div class="muted" style="font-size:13px">${esc(names)}${it.series?` · ${it.seriesI} of ${it.seriesN} in this set`:""}</div>
         <div class="row">
-          ${isDone?"":`<button class="small primary" data-qpost="${esc(it.id)}">Post now</button>
+          ${it.auto&&it.jobId&&hasDirect()?`<button class="small" data-qstatus="${esc(it.id)}">Check status</button>`:""}
+          ${isDone||it.auto?"":`<button class="small primary" data-qpost="${esc(it.id)}">Post now</button>
           <button class="small" data-qedit="${esc(it.id)}">Edit</button>
           <a class="btn small" target="_blank" rel="noopener" href="${esc(gcalLink(it))}">Add to Google Calendar</a>`}
           <button class="small ghost" data-qdel="${esc(it.id)}">Delete</button>
@@ -568,7 +758,7 @@ async function deleteItem(id){
   const it=queue.find(i=>i.id===id);if(!it)return;
   queue=queue.filter(i=>i.id!==id);renderQueue();await removeItem(id);
   (it.photos||[]).forEach(r=>photoStore.del(r));
-  toast("Deleted");
+  toast(it.auto&&it.at>Date.now()?"Removed from this list. It's still scheduled in Upload-Post, so cancel it there too.":"Deleted");
 }
 async function deleteSet(series){
   const gone=queue.filter(i=>i.series===series&&i.status!=="posted");if(!gone.length)return;
@@ -578,11 +768,12 @@ async function deleteSet(series){
   toast(`Deleted ${gone.length} scheduled posts`);
 }
 document.addEventListener("click",e=>{
-  const a=e.target.closest("[data-qpost],[data-qedit],[data-qdel],[data-qdelset]");if(!a)return;
+  const a=e.target.closest("[data-qpost],[data-qedit],[data-qdel],[data-qdelset],[data-qstatus]");if(!a)return;
   if(a.dataset.qpost)postNow(a.dataset.qpost);
   else if(a.dataset.qedit)editItem(a.dataset.qedit);
   else if(a.dataset.qdel)deleteItem(a.dataset.qdel);
   else if(a.dataset.qdelset)deleteSet(a.dataset.qdelset);
+  else if(a.dataset.qstatus)checkJob(a.dataset.qstatus,a);
 });
 /* Up to 7 days and times per post */
 const MAX_SLOTS=7;
@@ -618,16 +809,27 @@ $("#fillWeek").addEventListener("click",()=>{
 renderSlots();
 $("#schedBtn").addEventListener("click",async()=>{
   if(!draft.text.trim()&&!draft.photos.length){toast("Write your post or add a photo first.");return}
-  const times=[...new Set(slots.filter(Boolean).map(v=>new Date(v).getTime()).filter(isFinite))].sort((a,b)=>a-b);
+  let times=[...new Set(slots.filter(Boolean).map(v=>new Date(v).getTime()).filter(isFinite))].sort((a,b)=>a-b);
   if(!times.length){toast("Pick at least one day and time.");return}
   const past=times.filter(t=>t<Date.now()-60000);
   if(past.length){toast(past.length===1?"One of your times has passed. Change it to a future time.":past.length+" of your times have passed. Change them to future times.");return}
   const platforms=P.filter(p=>chosen[p.id]).map(p=>p.id);
   if(!platforms.length){toast("Include at least one site.");return}
   try{if("Notification" in window&&Notification.permission==="default")Notification.requestPermission().catch(()=>{})}catch(e){}
+  const auto=upReady()&&mediaKind(draft)&&$("#autoPost").checked;
+  const jobs=[];
+  if(auto){
+    const kind=mediaKind(draft),ups=upPlatforms(kind,platforms);
+    if(!ups.length){toast("None of the selected sites can take this "+kind+" through Upload-Post.");return}
+    const btn=$("#schedBtn");btn.disabled=true;btn.textContent="Sending to Upload-Post…";
+    try{for(const at of times){const b=await upSend(draft,ups,{scheduled_date:new Date(at).toISOString()});jobs.push(b.job_id||b.request_id||"")}}
+    catch(e){showUpError(e);if(!jobs.length){btn.disabled=false;btn.textContent="Schedule post";return}times=times.slice(0,jobs.length)}
+    btn.disabled=false;btn.textContent="Schedule post";
+  }
   const series=times.length>1?"s"+Date.now().toString(36):null;
   const items=times.map((at,i)=>({id:"q"+Date.now().toString(36)+i+Math.random().toString(36).slice(2,6),at,text:draft.text,link:draft.link,tags:draft.tags,
-    photos:[...draft.photos],platforms,status:"scheduled",created:Date.now(),...(series?{series,seriesN:times.length,seriesI:i+1}:{})}));
+    photos:[...draft.photos],platforms,status:"scheduled",created:Date.now(),...(series?{series,seriesN:times.length,seriesI:i+1}:{}),
+    ...(auto?{auto:true,jobId:jobs[i]}:{})}));
   queue.push(...items);
   draft={text:"",link:"",tags:draft.tags,photos:[]};
   $("#postText").value="";$("#postLink").value="";saveDraft();renderThumbs();
@@ -635,7 +837,7 @@ $("#schedBtn").addEventListener("click",async()=>{
   renderQueue();
   for(const it of items)await saveItem(it);
   location.hash="#scheduled";
-  toast(items.length===1?"Scheduled for "+fmtWhen(items[0].at):`Scheduled ${items.length} posts, starting ${fmtWhen(items[0].at)}`);
+  toast((auto?"Upload-Post will post automatically. ":"")+(items.length===1?"Scheduled for "+fmtWhen(items[0].at):`Scheduled ${items.length} posts, starting ${fmtWhen(items[0].at)}`));
 });
 let dueSig="";
 function tick(){const sig=queue.filter(i=>i.status!=="posted"&&i.at<=Date.now()).map(i=>i.id).join();if(sig!==dueSig){dueSig=sig;renderQueue()}}
